@@ -20,25 +20,23 @@ class StdOutLogger(object):
 
 
 class VideoDownloader:
-    SAVE_PATH = f'{os.path.expanduser("~")}/Downloads'
-    # Link of the video to be downloaded stored in this file path
-    links = []
 
     def __init__(self):
         self.links = []
+        self.download_directory = f'{os.path.expanduser("~")}/Downloads'
 
-    def open_file(self):
-        youtube_urls = open('links_file.txt', 'r')
+    def open_file(self, file):
+        youtube_urls = open(file, 'r')
         for url in youtube_urls:
             self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
 
     def get_save_path(self):
-        return self.SAVE_PATH
+        return self.download_directory
 
-    def set_save_path(self, save_path):
-        self.SAVE_PATH = save_path
-        self.SAVE_PATH = self.SAVE_PATH.replace(os.sep, '/')
+    def set_save_path(self, download_directory):
+        self.download_directory = download_directory
+        self.download_directory = self.download_directory.replace(os.sep, '/')
 
     def reset_links(self):
         print("Links Reset")
@@ -49,7 +47,7 @@ class VideoDownloader:
         self.links.extend(urls)
         self.links = list(dict.fromkeys(self.links))
 
-    def append_links(self, url):
+    def append_link(self, url):
         print("URL Appended: ", url)
         self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
@@ -57,15 +55,20 @@ class VideoDownloader:
     def get_links(self):
         return self.links
 
+    def download_all(self):
+        for link in self.links:
+            self.download_video(link)
+        self.reset_links()
+
     def download_video(self, link, audio=False):
-        outtmpl = f'{self.SAVE_PATH}/%(uploader)s - %(title)s.%(ext)s'
+        outtmpl = f'{self.download_directory}/%(uploader)s - %(title)s.%(ext)s'
         if "rumble.com" in link:
                 rumble_url = requests.get(link)
                 for rumble_embedded_url in rumble_url.text.split(","):
                     if "embedUrl" in rumble_embedded_url:
                         rumble_embedded_url = re.sub('"', '', re.sub('"embedUrl":', '', rumble_embedded_url))
                         link = rumble_embedded_url
-                        outtmpl = f'{self.SAVE_PATH}/%(title)s.%(ext)s'
+                        outtmpl = f'{self.download_directory}/%(title)s.%(ext)s'
 
         if audio:
             ydl_opts = {
@@ -92,7 +95,7 @@ class VideoDownloader:
         except Exception as e:
             try:
                 if audio:
-                    outtmpl = f'{self.SAVE_PATH}/%(id)s.%(ext)s'
+                    outtmpl = f'{self.download_directory}/%(id)s.%(ext)s'
                     ydl_opts = {
                         'format': 'bestaudio/best',
                         'progress_with_newline': True,
@@ -191,10 +194,9 @@ class VideoDownloader:
 
 
 def video_downloader(argv):
-    filename = "./links.txt"
     video_downloader_instance = VideoDownloader()
     try:
-        opts, args = getopt.getopt(argv, "hc", ["help", "clean"])
+        opts, args = getopt.getopt(argv, "hc:d:f:l:", ["help", "channel=", "directory=", "file=", "links="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -202,23 +204,29 @@ def video_downloader(argv):
         if opt in ("-h", "--help"):
             usage()
             sys.exit()
-        elif opt in ("-c", "--clean"):
-            clean_flag = True
+        elif opt in ("-c", "--channel"):
+            video_downloader_instance.get_channel_videos(arg)
+        elif opt in ("-d", "--directory"):
+            video_downloader_instance.set_save_path(arg)
+        elif opt in ("-f", "--file"):
+            video_downloader_instance.open_file(arg)
+        elif opt in ("-l", "--links"):
+            url_list = arg.split(",")
+            for url in url_list:
+                video_downloader_instance.append_link(url)
+
+    video_downloader_instance.download_all()
 
 
 def usage():
     print(f'Usage:\n'
           f'-h | --help      [ See usage ]\n'
-          f'-c | --clean     [ Convert mobile sites to regular site ]\n'
+          f'-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n'
           f'-d | --directory [ Location where the images will be saved ]\n'
-          f'     --dpi       [ DPI for the image ]\n'
           f'-f | --file      [ Text file to read the URLs from ]\n'
           f'-l | --links     [ Comma separated URLs (No spaces) ]\n'
-          f'-t | --type      [ Save images as PNG or JPEG ]\n'
-          f'-z | --zoom      [ The zoom to use on the browser ]\n'
           f'\n'
-          f'videodownloader -c -f <links_file.txt> '
-          '-l "<URL1,URL2,URL3>" -t <JPEG/PNG> -d "~/Downloads" -z 100 --dpi 1\n')
+          f'video-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n')
 
 
 def main():

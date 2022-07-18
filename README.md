@@ -4,18 +4,19 @@
 Download videos from the internet!
 
 ### Usage:
-| Short Flag | Long Flag | Description              |
-| --- | ------|--------------------------|
-| -h | --help | See Usage                |
-| -f | --file | Subtitle File            |
-| -m | --mode | + / -                    |
-| -t | --time | Time in seconds to shift |
+| Short Flag | Long Flag   | Description                                  |
+|------------|-------------|----------------------------------------------|
+| -h         | --help      | See usage                                    |
+| -c         | --channel   | YouTube Channel/User - Downloads all videos  |
+| -f         | --file      | File with video links                        |
+| -l         | --links     | Comma separated links                        |
+| -d         | --directory | Location to save videos                      |
+
 
 ### Example:
 ```bash
-video-downloader --file videos.txt --download-directory "C:\Users\Downloads"
+video-downloader --file videos.txt --directory "C:\Users\Downloads"
 ```
-
 
 #### Build Instructions
 Build Python Package
