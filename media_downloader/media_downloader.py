@@ -19,7 +19,7 @@ class StdOutLogger(object):
         print(f'{msg}')
 
 
-class VideoDownloader:
+class MediaDownloader:
 
     def __init__(self):
         self.links = []
@@ -55,9 +55,9 @@ class VideoDownloader:
     def get_links(self):
         return self.links
 
-    def download_all(self):
+    def download_all(self, audio=False):
         for link in self.links:
-            self.download_video(link)
+            self.download_video(link, audio)
         self.reset_links()
 
     def download_video(self, link, audio=False):
@@ -193,10 +193,11 @@ class VideoDownloader:
             attempts += 1
 
 
-def video_downloader(argv):
-    video_downloader_instance = VideoDownloader()
+def media_downloader(argv):
+    video_downloader_instance = MediaDownloader()
+    audio_only = False
     try:
-        opts, args = getopt.getopt(argv, "hc:d:f:l:", ["help", "channel=", "directory=", "file=", "links="])
+        opts, args = getopt.getopt(argv, "hac:d:f:l:", ["help", "audio", "channel=", "directory=", "file=", "links="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -204,6 +205,8 @@ def video_downloader(argv):
         if opt in ("-h", "--help"):
             usage()
             sys.exit()
+        elif opt in ("-a", "--audio"):
+            audio_only = True
         elif opt in ("-c", "--channel"):
             video_downloader_instance.get_channel_videos(arg)
         elif opt in ("-d", "--directory"):
@@ -215,23 +218,24 @@ def video_downloader(argv):
             for url in url_list:
                 video_downloader_instance.append_link(url)
 
-    video_downloader_instance.download_all()
+    video_downloader_instance.download_all(audio_only)
 
 
 def usage():
     print(f'Usage:\n'
           f'-h | --help      [ See usage ]\n'
+          f'-a | --audio     [ Download audio only ]\n'
           f'-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n'
           f'-d | --directory [ Location where the images will be saved ]\n'
           f'-f | --file      [ Text file to read the URLs from ]\n'
           f'-l | --links     [ Comma separated URLs (No spaces) ]\n'
           f'\n'
-          f'video-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n')
+          f'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n')
 
 
 def main():
-    video_downloader(sys.argv[1:])
+    media_downloader(sys.argv[1:])
 
 
 if __name__ == "__main__":
-    video_downloader(sys.argv[1:])
+    media_downloader(sys.argv[1:])

@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from setuptools import setup
-from video_downloader.version import __version__, __author__
+from media_downloader.version import __version__, __author__
 from pathlib import Path
 import re
 
@@ -13,23 +13,23 @@ readme = re.sub(r"Version: [0-9]*\.[0-9]*\.[0-9][0-9]*", f"Version: {version}", 
 print(f"README: {readme}")
 with open("README.md", "w") as readme_file:
     readme_file.write(readme)
-description = 'Synchronize your subtitle files by shifting the subtitle time (+/-)'
+description = 'Download audio/videos from the internet!'
 
 setup(
-    name='video-downloader',
+    name='media-downloader',
     version=f"{version}",
     description=description,
     long_description=f'{readme}',
     long_description_content_type='text/markdown',
-    url='https://github.com/Knucklessg1/video-downloader',
+    url='https://github.com/Knucklessg1/media-downloader',
     author=__author__,
     author_email='knucklessg1@gmail.com',
     license='Unlicense',
-    packages=['video_downloader'],
+    packages=['media_downloader'],
     include_package_data=True,
     install_requires=['youtube-dl', 'requests'],
-    py_modules=['video_downloader'],
-    package_data={'video_downloader': ['video_downloader']},
+    py_modules=['media_downloader'],
+    package_data={'media_downloader': ['media_downloader']},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: Public Domain',
@@ -38,5 +38,5 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    entry_points={'console_scripts': ['video-downloader = video_downloader.video_downloader:main']},
+    entry_points={'console_scripts': ['media-downloader = media_downloader.media_downloader:main']},
 )
