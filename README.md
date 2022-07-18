@@ -15,7 +15,7 @@ Download videos from the internet!
 
 ### Example:
 ```bash
-video-downloader --file videos.txt --directory "C:\Users\Downloads"
+video-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
 ```
 
 #### Build Instructions
