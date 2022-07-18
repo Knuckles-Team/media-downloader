@@ -3,6 +3,13 @@
 
 Download videos from the internet!
 
+### Supports:
+- YouTube
+- Twitter
+- Rumble
+- BitChute
+- And More!
+
 ### Usage:
 | Short Flag | Long Flag   | Description                                  |
 |------------|-------------|----------------------------------------------|
