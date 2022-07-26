@@ -7,6 +7,8 @@ import re
 import getopt
 import requests
 import youtube_dl
+from multiprocessing import Pool
+
 
 class StdOutLogger(object):
     def debug(self, msg):
@@ -24,6 +26,7 @@ class MediaDownloader:
     def __init__(self):
         self.links = []
         self.download_directory = f'{os.path.expanduser("~")}/Downloads'
+        self.audio = False
 
     def open_file(self, file):
         youtube_urls = open(file, 'r')
@@ -55,12 +58,19 @@ class MediaDownloader:
     def get_links(self):
         return self.links
 
-    def download_all(self, audio=False):
-        for link in self.links:
-            self.download_video(link, audio)
+    def set_audio(self, audio=False):
+        self.audio = audio
+
+    def download_all(self):
+        pool = Pool(processes=os.cpu_count())
+        try:
+            pool.map(self.download_video, self.links)
+        finally:
+            pool.close()
+            pool.join()
         self.reset_links()
 
-    def download_video(self, link, audio=False):
+    def download_video(self, link):
         outtmpl = f'{self.download_directory}/%(uploader)s - %(title)s.%(ext)s'
         if "rumble.com" in link:
                 rumble_url = requests.get(link)
@@ -70,7 +80,7 @@ class MediaDownloader:
                         link = rumble_embedded_url
                         outtmpl = f'{self.download_directory}/%(title)s.%(ext)s'
 
-        if audio:
+        if self.audio:
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -94,7 +104,7 @@ class MediaDownloader:
                 print(ydl.download([link]))
         except Exception as e:
             try:
-                if audio:
+                if self.audio:
                     outtmpl = f'{self.download_directory}/%(id)s.%(ext)s'
                     ydl_opts = {
                         'format': 'bestaudio/best',
@@ -206,7 +216,7 @@ def media_downloader(argv):
             usage()
             sys.exit()
         elif opt in ("-a", "--audio"):
-            audio_only = True
+            video_downloader_instance.set_audio(audio=True)
         elif opt in ("-c", "--channel"):
             video_downloader_instance.get_channel_videos(arg)
         elif opt in ("-d", "--directory"):
@@ -218,7 +228,7 @@ def media_downloader(argv):
             for url in url_list:
                 video_downloader_instance.append_link(url)
 
-    video_downloader_instance.download_all(audio_only)
+    video_downloader_instance.download_all()
 
 
 def usage():
