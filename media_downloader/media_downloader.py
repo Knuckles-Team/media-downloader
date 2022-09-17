@@ -224,7 +224,8 @@ def media_downloader(argv):
         elif opt in ("-f", "--file"):
             video_downloader_instance.open_file(arg)
         elif opt in ("-l", "--links"):
-            url_list = arg.split(",")
+            url_list = arg.replace(" ", "")
+            url_list = url_list.split(",")
             for url in url_list:
                 video_downloader_instance.append_link(url)
 
