@@ -27,6 +27,13 @@ Download videos and audio from the internet!
 media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
 ```
 
+#### Install Instructions
+Install Python Package
+
+```bash
+python -m pip install media-downloader
+```
+
 #### Build Instructions
 Build Python Package
 
