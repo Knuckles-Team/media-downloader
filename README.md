@@ -1,5 +1,5 @@
 # Media Downloader
-*Version: 0.0.4*
+*Version: 0.1.0*
 
 Download videos and audio from the internet!
 
