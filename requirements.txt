@@ -1,2 +1,2 @@
-youtube-dl
-requests
+youtube-dl>=2021.12.17
+requests>=2.28.1

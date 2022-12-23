@@ -27,7 +27,7 @@ setup(
     license='Unlicense',
     packages=['media_downloader'],
     include_package_data=True,
-    install_requires=['youtube-dl', 'requests'],
+    install_requires=['youtube-dl>=2021.12.17', 'requests>=2.28.1'],
     py_modules=['media_downloader'],
     package_data={'media_downloader': ['media_downloader']},
     classifiers=[
