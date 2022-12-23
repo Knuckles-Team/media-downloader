@@ -4,13 +4,15 @@
 from setuptools import setup
 from media_downloader.version import __version__, __author__
 from pathlib import Path
+import os
 import re
-
+from pip._internal.network.session import PipSession
+from pip._internal.req import parse_requirements
 
 readme = Path('README.md').read_text()
 version = __version__
+requirements = parse_requirements(os.path.join(os.path.dirname(__file__), 'requirements.txt'), session=PipSession())
 readme = re.sub(r"Version: [0-9]*\.[0-9]*\.[0-9][0-9]*", f"Version: {version}", readme)
-print(f"README: {readme}")
 with open("README.md", "w") as readme_file:
     readme_file.write(readme)
 description = 'Download audio/videos from the internet!'
@@ -27,7 +29,7 @@ setup(
     license='Unlicense',
     packages=['media_downloader'],
     include_package_data=True,
-    install_requires=['youtube-dl>=2021.12.17', 'requests>=2.28.1'],
+    install_requires=[str(requirement.requirement) for requirement in requirements],
     py_modules=['media_downloader'],
     package_data={'media_downloader': ['media_downloader']},
     classifiers=[
@@ -38,6 +40,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     entry_points={'console_scripts': ['media-downloader = media_downloader.media_downloader:main']},
 )
