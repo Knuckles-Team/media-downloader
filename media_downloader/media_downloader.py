@@ -6,7 +6,7 @@ import sys
 import re
 import getopt
 import requests
-import youtube_dl
+import yt_dlp
 from multiprocessing import Pool
 
 
@@ -100,7 +100,7 @@ class MediaDownloader:
                 'outtmpl': outtmpl
             }
         try:
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 print(ydl.download([link]))
         except Exception as e:
             try:
@@ -124,7 +124,7 @@ class MediaDownloader:
                         'logger': StdOutLogger(),
                         'outtmpl': outtmpl
                     }
-                with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     print(ydl.download([link]))
             except Exception as e:
                 print(f"Unable to download video: {link}")

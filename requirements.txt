@@ -1,2 +1,2 @@
-youtube-dl>=2021.12.17
+yt-dlp>=2023.3.4
 requests>=2.28.1
