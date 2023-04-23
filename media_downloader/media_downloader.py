@@ -8,6 +8,7 @@ import getopt
 import requests
 import yt_dlp
 from multiprocessing import Pool
+from media_downloader.version import __version__, __author__, __credits__
 
 
 class StdOutLogger(object):
@@ -233,14 +234,18 @@ def media_downloader(argv):
 
 
 def usage():
-    print(f'Usage:\n'
+    print(f'Media-Downloader: A tool to download any video off the internet!\n'
+          f'Version: {__version__}\n'
+          f'Author: {__author__}\n'
+          f'Credits: {__credits__}\n'
+          f'Usage:\n'
           f'-h | --help      [ See usage ]\n'
           f'-a | --audio     [ Download audio only ]\n'
           f'-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n'
           f'-d | --directory [ Location where the images will be saved ]\n'
           f'-f | --file      [ Text file to read the URLs from ]\n'
           f'-l | --links     [ Comma separated URLs (No spaces) ]\n'
-          f'\n'
+          f'\nExample:\n'
           f'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n')
 
 
