@@ -238,7 +238,7 @@ def usage():
           f'Version: {__version__}\n'
           f'Author: {__author__}\n'
           f'Credits: {__credits__}\n'
-          f'Usage:\n'
+          f'\nUsage:\n'
           f'-h | --help      [ See usage ]\n'
           f'-a | --audio     [ Download audio only ]\n'
           f'-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n'
