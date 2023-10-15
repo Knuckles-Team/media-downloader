@@ -24,6 +24,8 @@
 
 Download videos and audio from the internet!
 
+This repository is actively maintained - Contributions are welcome!
+
 ### Supports:
 - YouTube
 - Twitter
