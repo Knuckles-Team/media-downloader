@@ -51,10 +51,31 @@ This repository is actively maintained - Contributions are welcome!
 <details>
   <summary><b>Example:</b></summary>
 
+Run through CLI
 ```bash
 media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
 ```
 
+Use directly in Python
+```python
+from media_downloader import MediaDownloader
+
+url = "https://YootToob.com/video"
+
+video_downloader_instance = MediaDownloader()
+
+video_downloader_instance.set_audio(audio=False)
+
+video_downloader_instance.set_save_path("PATH")
+
+video_downloader_instance.open_file("FILE")
+
+video_downloader_instance.get_channel_videos("YT-Channel Name")
+
+video_downloader_instance.append_link(url)
+
+video_downloader_instance.download_all()
+```
 </details>
 
 <details>
