@@ -22,7 +22,9 @@
 
 *Version: 0.9.0*
 
-Download videos and audio from the internet!
+Download videos and audio from the internet! 
+
+This is a wrapper for the pytube library to simplify downloading from these various sources.
 
 This repository is actively maintained - Contributions are welcome!
 
@@ -58,23 +60,34 @@ media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" -
 
 Use directly in Python
 ```python
+# Import library
 from media_downloader import MediaDownloader
 
+# Set URL of video/audio here
 url = "https://YootToob.com/video"
 
+# Instantiate vide_downloader_instance
 video_downloader_instance = MediaDownloader()
 
-video_downloader_instance.set_audio(audio=False)
+# Set the location to save the video
+video_downloader_instance.set_save_path("C:/Users/you/Downloads")
 
-video_downloader_instance.set_save_path("PATH")
-
-video_downloader_instance.open_file("FILE")
-
-video_downloader_instance.get_channel_videos("YT-Channel Name")
-
+# Add URL to download
 video_downloader_instance.append_link(url)
 
+# Download all videos appended
 video_downloader_instance.download_all()
+```
+
+```python
+# Optional - Set Audio to True, Default is False if unspecified.
+video_downloader_instance.set_audio(audio=True)
+
+# Optional - Open a file of video/audio URL(s)
+video_downloader_instance.open_file("FILE")
+
+# Optional - Enter a YouTube channel name and download their latest videos
+video_downloader_instance.get_channel_videos("YT-Channel Name")
 ```
 </details>
 
