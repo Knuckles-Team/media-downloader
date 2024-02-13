@@ -101,6 +101,23 @@ python -m pip install media-downloader
 ```
 </details>
 
+## Geniusbot Application
+
+Use Rom Manager tool with a GUI through Geniusbot
+
+Visit our [GitHub](https://github.com/Knuckles-Team/geniusbot) for more information
+
+<details>
+  <summary><b>Installation Instructions with Geniusbot:</b></summary>
+
+Install Python Package
+
+```bash
+python -m pip install geniusbot
+```
+
+</details>
+
 <details>
   <summary><b>Repository Owners:</b></summary>
 
