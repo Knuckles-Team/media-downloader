@@ -13,13 +13,13 @@ from media_downloader.version import __version__, __author__, __credits__
 
 class StdOutLogger(object):
     def debug(self, msg):
-        print(f'{msg}')
+        print(f"{msg}")
 
     def warning(self, msg):
-        print(f'{msg}')
+        print(f"{msg}")
 
     def error(self, msg):
-        print(f'{msg}')
+        print(f"{msg}")
 
 
 class MediaDownloader:
@@ -30,7 +30,7 @@ class MediaDownloader:
         self.audio = False
 
     def open_file(self, file):
-        youtube_urls = open(file, 'r')
+        youtube_urls = open(file, "r")
         for url in youtube_urls:
             self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
@@ -40,7 +40,7 @@ class MediaDownloader:
 
     def set_save_path(self, download_directory):
         self.download_directory = download_directory
-        self.download_directory = self.download_directory.replace(os.sep, '/')
+        self.download_directory = self.download_directory.replace(os.sep, "/")
 
     def reset_links(self):
         print("Links Reset")
@@ -72,62 +72,68 @@ class MediaDownloader:
         self.reset_links()
 
     def download_video(self, link):
-        outtmpl = f'{self.download_directory}/%(uploader)s - %(title)s.%(ext)s'
+        outtmpl = f"{self.download_directory}/%(uploader)s - %(title)s.%(ext)s"
         if "rumble.com" in link:
-                rumble_url = requests.get(link)
-                for rumble_embedded_url in rumble_url.text.split(","):
-                    if "embedUrl" in rumble_embedded_url:
-                        rumble_embedded_url = re.sub('"', '', re.sub('"embedUrl":', '', rumble_embedded_url))
-                        link = rumble_embedded_url
-                        outtmpl = f'{self.download_directory}/%(title)s.%(ext)s'
+            rumble_url = requests.get(link)
+            for rumble_embedded_url in rumble_url.text.split(","):
+                if "embedUrl" in rumble_embedded_url:
+                    rumble_embedded_url = re.sub(
+                        '"', "", re.sub('"embedUrl":', "", rumble_embedded_url)
+                    )
+                    link = rumble_embedded_url
+                    outtmpl = f"{self.download_directory}/%(title)s.%(ext)s"
 
         if self.audio:
             ydl_opts = {
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '320',
-                }],
-                'progress_with_newline': True,
-                'logger': StdOutLogger(),
-                'outtmpl': outtmpl
+                "format": "bestaudio/best",
+                "postprocessors": [
+                    {
+                        "key": "FFmpegExtractAudio",
+                        "preferredcodec": "mp3",
+                        "preferredquality": "320",
+                    }
+                ],
+                "progress_with_newline": True,
+                "logger": StdOutLogger(),
+                "outtmpl": outtmpl,
             }
         else:
             ydl_opts = {
-                'format': 'best',
-                'progress_with_newline': True,
-                'logger': StdOutLogger(),
-                'outtmpl': outtmpl
+                "format": "best",
+                "progress_with_newline": True,
+                "logger": StdOutLogger(),
+                "outtmpl": outtmpl,
             }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 print(ydl.download([link]))
-        except Exception as e:
+        except Exception:
             try:
                 if self.audio:
-                    outtmpl = f'{self.download_directory}/%(id)s.%(ext)s'
+                    outtmpl = f"{self.download_directory}/%(id)s.%(ext)s"
                     ydl_opts = {
-                        'format': 'bestaudio/best',
-                        'progress_with_newline': True,
-                        'logger': StdOutLogger(),
-                        'postprocessors': [{
-                            'key': 'FFmpegExtractAudio',
-                            'preferredcodec': 'mp3',
-                            'preferredquality': '320',
-                        }],
-                        'outtmpl': outtmpl
+                        "format": "bestaudio/best",
+                        "progress_with_newline": True,
+                        "logger": StdOutLogger(),
+                        "postprocessors": [
+                            {
+                                "key": "FFmpegExtractAudio",
+                                "preferredcodec": "mp3",
+                                "preferredquality": "320",
+                            }
+                        ],
+                        "outtmpl": outtmpl,
                     }
                 else:
                     ydl_opts = {
-                        'format': 'best',
-                        'progress_with_newline': True,
-                        'logger': StdOutLogger(),
-                        'outtmpl': outtmpl
+                        "format": "best",
+                        "progress_with_newline": True,
+                        "logger": StdOutLogger(),
+                        "outtmpl": outtmpl,
                     }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     print(ydl.download([link]))
-            except Exception as e:
+            except Exception:
                 print(f"Unable to download video: {link}")
 
     def get_channel_videos(self, channel, limit=-1):
@@ -137,10 +143,11 @@ class MediaDownloader:
         while attempts < 3:
             url = f"https://www.youtube.com/user/{username}/videos"
             page = requests.get(url).content
-            data = str(page).split(' ')
+            data = str(page).split(" ")
             item = 'href="/watch?'
-            vids = [line.replace('href="', 'youtube.com') for line in data if
-                    item in line]  # list of all videos listed twice
+            vids = [
+                line.replace('href="', "youtube.com") for line in data if item in line
+            ]  # list of all videos listed twice
             # print(vids)  # index the latest video
             x = 0
             if vids:
@@ -158,19 +165,21 @@ class MediaDownloader:
                 print("URL: ", url)
                 page = requests.get(url).content
                 print("Page: ", page)
-                data = str(page).split(' ')
+                data = str(page).split(" ")
                 print("Data: ", data)
-                item = 'https://i.ytimg.com/vi/'
+                item = "https://i.ytimg.com/vi/"
                 vids = []
                 for line in data:
                     if item in line:
                         vid = line
-                        #vid = line.replace('https://i.ytimg.com/vi/', '')
+                        # vid = line.replace('https://i.ytimg.com/vi/', '')
                         try:
-                            found = re.search('https://i.ytimg.com/vi/(.+?)/hqdefault.', vid).group(1)
+                            found = re.search(
+                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", vid
+                            ).group(1)
                         except AttributeError:
                             # AAA, ZZZ not found in the original string
-                            found = ''  # apply your error handling
+                            found = ""  # apply your error handling
                         print("Vid, ", vid)
                         vid = f"https://www.youtube.com/watch?v={found}"
                         vids.append(vid)
@@ -188,8 +197,11 @@ class MediaDownloader:
                         x += 1
                 else:
                     print("Trying Old Method")
-                    vids = [line.replace('href="', 'youtube.com') for line in data if
-                            item in line]  # list of all videos listed twice
+                    vids = [
+                        line.replace('href="', "youtube.com")
+                        for line in data
+                        if item in line
+                    ]  # list of all videos listed twice
                     if vids:
                         for vid in vids:
                             if limit < 0:
@@ -208,7 +220,11 @@ def media_downloader(argv):
     video_downloader_instance = MediaDownloader()
     audio_only = False
     try:
-        opts, args = getopt.getopt(argv, "hac:d:f:l:", ["help", "audio", "channel=", "directory=", "file=", "links="])
+        opts, args = getopt.getopt(
+            argv,
+            "hac:d:f:l:",
+            ["help", "audio", "channel=", "directory=", "file=", "links="],
+        )
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -234,19 +250,21 @@ def media_downloader(argv):
 
 
 def usage():
-    print(f'Media-Downloader: A tool to download any video off the internet!\n'
-          f'Version: {__version__}\n'
-          f'Author: {__author__}\n'
-          f'Credits: {__credits__}\n'
-          f'\nUsage:\n'
-          f'-h | --help      [ See usage ]\n'
-          f'-a | --audio     [ Download audio only ]\n'
-          f'-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n'
-          f'-d | --directory [ Location where the images will be saved ]\n'
-          f'-f | --file      [ Text file to read the URLs from ]\n'
-          f'-l | --links     [ Comma separated URLs (No spaces) ]\n'
-          f'\nExample:\n'
-          f'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n')
+    print(
+        f"Media-Downloader: A tool to download any video off the internet!\n"
+        f"Version: {__version__}\n"
+        f"Author: {__author__}\n"
+        f"Credits: {__credits__}\n"
+        f"\nUsage:\n"
+        f"-h | --help      [ See usage ]\n"
+        f"-a | --audio     [ Download audio only ]\n"
+        f"-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n"
+        f"-d | --directory [ Location where the images will be saved ]\n"
+        f"-f | --file      [ Text file to read the URLs from ]\n"
+        f"-l | --links     [ Comma separated URLs (No spaces) ]\n"
+        f"\nExample:\n"
+        f'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n'
+    )
 
 
 def main():

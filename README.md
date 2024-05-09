@@ -22,7 +22,7 @@
 
 *Version: 0.11.3*
 
-Download videos and audio from the internet! 
+Download videos and audio from the internet!
 
 This is a wrapper for the pytube library to simplify downloading from these various sources.
 
