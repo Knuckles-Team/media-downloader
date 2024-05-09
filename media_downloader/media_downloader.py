@@ -5,6 +5,8 @@ import os
 import sys
 import re
 import getopt
+from typing import List
+
 import requests
 import yt_dlp
 from multiprocessing import Pool
@@ -35,7 +37,7 @@ class MediaDownloader:
             self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
 
-    def get_save_path(self):
+    def get_save_path(self) -> str:
         return self.download_directory
 
     def set_save_path(self, download_directory):
@@ -56,7 +58,7 @@ class MediaDownloader:
         self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
 
-    def get_links(self):
+    def get_links(self) -> List[str]:
         return self.links
 
     def set_audio(self, audio=False):
@@ -218,7 +220,6 @@ class MediaDownloader:
 
 def media_downloader(argv):
     video_downloader_instance = MediaDownloader()
-    audio_only = False
     try:
         opts, args = getopt.getopt(
             argv,
