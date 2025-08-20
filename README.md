@@ -24,7 +24,7 @@
 
 Download videos and audio from the internet!
 
-This is a wrapper for the pytube library to simplify downloading from these various sources.
+MCP Server Support!
 
 This repository is actively maintained - Contributions are welcome!
 
@@ -89,6 +89,25 @@ video_downloader_instance.open_file("FILE")
 # Optional - Enter a YouTube channel name and download their latest videos
 video_downloader_instance.get_channel_videos("YT-Channel Name")
 ```
+
+Use with AI
+
+```bash
+python -m media_downloader_mcp
+```
+
+```json
+{
+  "mcpServers": {
+    "media_downloader": {
+      "command": "python",
+      "args": ["-m", "media_downloader_mcp"]
+    }
+  }
+}
+
+```
+
 </details>
 
 <details>
