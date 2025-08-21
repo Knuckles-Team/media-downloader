@@ -3,5 +3,4 @@
 from .media_downloader_mcp import main
 
 if __name__ == "__main__":
-    import sys
-    main(sys.argv[1:])
+    main()
