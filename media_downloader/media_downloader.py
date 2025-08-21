@@ -208,17 +208,17 @@ def media_downloader(argv):
             usage()
             sys.exit()
         elif opt in ("-a", "--audio"):
-            video_downloader_instance.set_audio(audio=True)
+            video_downloader_instance.audio = True
         elif opt in ("-c", "--channel"):
             video_downloader_instance.get_channel_videos(arg)
         elif opt in ("-d", "--directory"):
-            video_downloader_instance.set_save_path(arg)
+            video_downloader_instance.download_directory = arg
         elif opt in ("-f", "--file"):
             video_downloader_instance.open_file(arg)
         elif opt in ("-l", "--links"):
             url_list = arg.replace(" ", "").split(",")
             for url in url_list:
-                video_downloader_instance.append_link(url)
+                video_downloader_instance.links.extend(url_list)
 
     video_downloader_instance.download_all()
 
