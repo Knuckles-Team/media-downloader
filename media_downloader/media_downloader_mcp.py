@@ -109,7 +109,7 @@ def media_downloader_mcp(argv):
 
 
 def main():
-    mcp.run(transport="stdio")
+    media_downloader_mcp(sys.argv[1:])
 
 
 if __name__ == "__main__":
