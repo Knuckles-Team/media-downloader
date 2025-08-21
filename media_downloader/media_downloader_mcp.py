@@ -5,7 +5,7 @@ import os
 import sys
 import logging
 from media_downloader import MediaDownloader, setup_logging
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 
 # Initialize logging for MCP server (logs to file)
 setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
@@ -15,7 +15,7 @@ mcp = FastMCP(name="MediaDownloaderServer")
 
 @mcp.tool()
 async def download_media(
-    video_url: str, download_directory: str = ".", audio_only: bool = False
+    video_url: str, download_directory: str = ".", audio_only: bool = False, ctx: Context = None
 ) -> str:
     """Downloads media from a given URL to the specified directory.
 
