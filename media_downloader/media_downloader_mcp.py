@@ -4,6 +4,7 @@ import getopt
 import os
 import sys
 import logging
+from typing import Optional
 from media_downloader import MediaDownloader, setup_logging
 from fastmcp import FastMCP, Context
 
@@ -15,7 +16,7 @@ mcp = FastMCP(name="MediaDownloaderServer")
 
 @mcp.tool()
 async def download_media(
-    video_url: str, download_directory: str = None, audio_only: bool = False, ctx: Context = None
+    video_url: str, download_directory: Optional[str] = None, audio_only: Optional[bool] = False, ctx: Context = None
 ) -> str:
     """Downloads media from a given URL to the specified directory.
 
