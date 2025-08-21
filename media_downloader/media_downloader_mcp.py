@@ -4,11 +4,9 @@ import getopt
 import os
 import sys
 from media_downloader import MediaDownloader
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
-from mcp.client import MCPClient
-
-mcp = FastMCP("MediaDownloader")
+mcp = FastMCP("MediaDownloaderServer")
 
 
 @mcp.tool()
@@ -59,8 +57,8 @@ async def download_media(
 
 def media_downloader_mcp(argv):
     transport = "stdio"
-    host = None
-    port = None
+    host = "0.0.0.0"
+    port = 5000
     try:
         opts, args = getopt.getopt(
             argv,
