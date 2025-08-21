@@ -61,7 +61,7 @@ async def download_media(
 def media_downloader_mcp(argv):
     transport = "stdio"
     host = "0.0.0.0"
-    port = 5000
+    port = 8000
     try:
         opts, args = getopt.getopt(
             argv,
@@ -105,7 +105,7 @@ def client():
 
 
 def main():
-    media_downloader_mcp(sys.argv[1:])
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
