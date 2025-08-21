@@ -3,12 +3,14 @@
 import getopt
 import os
 import sys
-from media_downloader import MediaDownloader
+import logging
+from media_downloader import MediaDownloader, setup_logging
 from fastmcp import FastMCP
 
-mcp = FastMCP(
-    name="MediaDownloaderServer",
-)
+# Initialize logging for MCP server (logs to file)
+setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
+
+mcp = FastMCP(name="MediaDownloaderServer")
 
 
 @mcp.tool()
@@ -29,6 +31,11 @@ async def download_media(
         ValueError: If the URL or directory is invalid.
         RuntimeError: If the download fails.
     """
+    logger = logging.getLogger("MediaDownloader")
+    logger.debug(
+        f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
+    )
+
     try:
         # Validate inputs
         if not video_url or not download_directory:
@@ -44,18 +51,17 @@ async def download_media(
         downloader.append_link(video_url)
 
         # Perform the download
-        downloader.download_all()
+        file_path = downloader.download_all()
 
-        # Assume download_all() saves the file and the path can be retrieved
-        # Adjust this based on actual MediaDownloader behavior
-        save_path = os.path.join(download_directory, video_url.split("/")[-1])
-        if not os.path.exists(save_path):
+        # Check if the file was downloaded
+        if not file_path or not os.path.exists(file_path):
             raise RuntimeError("Download failed or file not found")
 
-        return download_directory
+        logger.debug(f"Download completed, file path: {file_path}")
+        return file_path
     except Exception as e:
+        logger.error(f"Failed to download media: {str(e)}")
         raise RuntimeError(f"Failed to download media: {str(e)}")
-
 
 
 def media_downloader_mcp(argv):
@@ -84,24 +90,9 @@ def media_downloader_mcp(argv):
     elif transport == "http":
         mcp.run(transport="http", host=host, port=port)
     else:
-        print("Transport not supported")
+        logger = logging.getLogger("MediaDownloader")
+        logger.error("Transport not supported")
         sys.exit(1)
-
-def client():
-    # Connect to the server (update host/port if using http)
-    client = MCPClient(host="localhost", port=5000)
-
-    # Call the download_media tool
-    response = client.call_tool(
-        "download_media",
-        {
-            "video_url": "https://example.com/video.mp4",
-            "download_directory": "./downloads",
-            "audio_only": False,
-        },
-    )
-
-    print(f"Downloaded file path: {response}")
 
 
 def main():

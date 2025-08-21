@@ -6,21 +6,48 @@ import sys
 import re
 import getopt
 from typing import List
-
+import logging
 import requests
 import yt_dlp
 from multiprocessing import Pool
 
 
-class StdOutLogger(object):
+# Configure logging
+def setup_logging(is_mcp_server=False, log_file="media_downloader.log"):
+    logger = logging.getLogger("MediaDownloader")
+    logger.setLevel(logging.DEBUG)
+
+    # Clear any existing handlers to avoid duplicate logs
+    logger.handlers.clear()
+
+    if is_mcp_server:
+        # Log to a file when running as MCP server
+        handler = logging.FileHandler(log_file)
+    else:
+        # Log to console (stdout) when running standalone
+        handler = logging.StreamHandler(sys.stdout)
+
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
+
+
+class YtDlpLogger:
+    def __init__(self, logger):
+        self.logger = logger
+
     def debug(self, msg):
-        print(f"{msg}")
+        self.logger.debug(msg)
 
     def warning(self, msg):
-        print(f"{msg}")
+        self.logger.warning(msg)
 
     def error(self, msg):
-        print(f"{msg}")
+        self.logger.error(msg)
 
 
 class MediaDownloader:
@@ -29,6 +56,7 @@ class MediaDownloader:
         self.links = []
         self.download_directory = f'{os.path.expanduser("~")}/Downloads'
         self.audio = False
+        self.logger = logging.getLogger("MediaDownloader")
 
     def open_file(self, file):
         youtube_urls = open(file, "r")
@@ -40,20 +68,20 @@ class MediaDownloader:
         return self.download_directory
 
     def set_save_path(self, download_directory):
-        self.download_directory = download_directory
-        self.download_directory = self.download_directory.replace(os.sep, "/")
+        self.download_directory = download_directory.replace(os.sep, "/")
+        self.logger.debug(f"Set download directory to: {self.download_directory}")
 
     def reset_links(self):
-        print("Links Reset")
+        self.logger.debug("Resetting links")
         self.links = []
 
     def extend_links(self, urls):
-        print("URL Extended: ", urls)
+        self.logger.debug(f"Extending links: {urls}")
         self.links.extend(urls)
         self.links = list(dict.fromkeys(self.links))
 
     def append_link(self, url):
-        print("URL Appended: ", url)
+        self.logger.debug(f"Appending link: {url}")
         self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
 
@@ -62,8 +90,10 @@ class MediaDownloader:
 
     def set_audio(self, audio=False):
         self.audio = audio
+        self.logger.debug(f"Audio mode set to: {audio}")
 
     def download_all(self):
+        self.logger.debug(f"Downloading {len(self.links)} links")
         pool = Pool(processes=os.cpu_count())
         try:
             pool.map(self.download_video, self.links)
@@ -73,8 +103,10 @@ class MediaDownloader:
         self.reset_links()
 
     def download_video(self, link):
+        self.logger.debug(f"Downloading video: {link}")
         outtmpl = f"{self.download_directory}/%(uploader)s - %(title)s.%(ext)s"
         if "rumble.com" in link:
+            self.logger.debug(f"Processing Rumble URL: {link}")
             rumble_url = requests.get(link)
             for rumble_embedded_url in rumble_url.text.split(","):
                 if "embedUrl" in rumble_embedded_url:
@@ -83,141 +115,93 @@ class MediaDownloader:
                     )
                     link = rumble_embedded_url
                     outtmpl = f"{self.download_directory}/%(title)s.%(ext)s"
+                    self.logger.debug(f"Updated Rumble URL: {link}")
 
+        ydl_opts = {
+            "format": "bestaudio/best" if self.audio else "best",
+            "outtmpl": outtmpl,
+            "quiet": True,  # Suppress yt_dlp console output
+            "no_warnings": True,  # Suppress warnings
+            "progress_with_newline": False,  # Disable progress output
+            "logger": YtDlpLogger(self.logger),  # Use custom logger
+        }
         if self.audio:
-            ydl_opts = {
-                "format": "bestaudio/best",
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": "320",
-                    }
-                ],
-                "progress_with_newline": True,
-                "logger": StdOutLogger(),
-                "outtmpl": outtmpl,
-            }
-        else:
-            ydl_opts = {
-                "format": "best",
-                "progress_with_newline": True,
-                "logger": StdOutLogger(),
-                "outtmpl": outtmpl,
-            }
+            ydl_opts["postprocessors"] = [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "320",
+                }
+            ]
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                print(ydl.download([link]))
-        except Exception:
+                info = ydl.extract_info(link, download=True)
+                return ydl.prepare_filename(info)  # Return the actual file path
+        except Exception as e:
+            self.logger.error(f"Failed to download {link}: {str(e)}")
             try:
-                if self.audio:
-                    outtmpl = f"{self.download_directory}/%(id)s.%(ext)s"
-                    ydl_opts = {
-                        "format": "bestaudio/best",
-                        "progress_with_newline": True,
-                        "logger": StdOutLogger(),
-                        "postprocessors": [
-                            {
-                                "key": "FFmpegExtractAudio",
-                                "preferredcodec": "mp3",
-                                "preferredquality": "320",
-                            }
-                        ],
-                        "outtmpl": outtmpl,
-                    }
-                else:
-                    ydl_opts = {
-                        "format": "best",
-                        "progress_with_newline": True,
-                        "logger": StdOutLogger(),
-                        "outtmpl": outtmpl,
-                    }
+                outtmpl = f"{self.download_directory}/%(id)s.%(ext)s"
+                ydl_opts["outtmpl"] = outtmpl
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    print(ydl.download([link]))
-            except Exception:
-                print(f"Unable to download video: {link}")
+                    info = ydl.extract_info(link, download=True)
+                    return ydl.prepare_filename(info)
+            except Exception as e:
+                self.logger.error(f"Retry failed for {link}: {str(e)}")
+                return None
 
     def get_channel_videos(self, channel, limit=-1):
-        vids = None
+        self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
         username = channel
         attempts = 0
         while attempts < 3:
             url = f"https://www.youtube.com/user/{username}/videos"
+            self.logger.debug(f"Trying URL: {url}")
             page = requests.get(url).content
             data = str(page).split(" ")
             item = 'href="/watch?'
             vids = [
                 line.replace('href="', "youtube.com") for line in data if item in line
-            ]  # list of all videos listed twice
-            # print(vids)  # index the latest video
-            x = 0
+            ]
             if vids:
-                # print("Link Set")
+                self.logger.debug(f"Found {len(vids)} videos")
+                x = 0
                 for vid in vids:
-                    if limit < 0:
-                        self.links.append(vid)
-                    elif x >= limit:
-                        break
-                    else:
-                        self.links.append(vid)
+                    if limit < 0 or x < limit:
+                        self.append_link(vid)
                     x += 1
+                return
             else:
                 url = f"https://www.youtube.com/c/{channel}/videos"
-                print("URL: ", url)
+                self.logger.debug(f"Trying URL: {url}")
                 page = requests.get(url).content
-                print("Page: ", page)
                 data = str(page).split(" ")
-                print("Data: ", data)
                 item = "https://i.ytimg.com/vi/"
                 vids = []
                 for line in data:
                     if item in line:
-                        vid = line
-                        # vid = line.replace('https://i.ytimg.com/vi/', '')
                         try:
                             found = re.search(
-                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", vid
+                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
                             ).group(1)
+                            vid = f"https://www.youtube.com/watch?v={found}"
+                            vids.append(vid)
                         except AttributeError:
-                            # AAA, ZZZ not found in the original string
-                            found = ""  # apply your error handling
-                        print("Vid, ", vid)
-                        vid = f"https://www.youtube.com/watch?v={found}"
-                        vids.append(vid)
-                print(vids)  # index the latest video
-                x = 0
+                            continue
                 if vids:
-                    # print("Link Set")
+                    self.logger.debug(f"Found {len(vids)} videos")
+                    x = 0
                     for vid in vids:
-                        if limit < 0:
-                            self.links.append(vid)
-                        elif x >= limit:
-                            break
-                        else:
-                            self.links.append(vid)
+                        if limit < 0 or x < limit:
+                            self.append_link(vid)
                         x += 1
-                else:
-                    print("Trying Old Method")
-                    vids = [
-                        line.replace('href="', "youtube.com")
-                        for line in data
-                        if item in line
-                    ]  # list of all videos listed twice
-                    if vids:
-                        for vid in vids:
-                            if limit < 0:
-                                self.links.append(vid)
-                            elif x >= limit:
-                                break
-                            else:
-                                self.links.append(vid)
-                            x += 1
-                    else:
-                        print("Could not find User or Channel")
+                    return
             attempts += 1
+        self.logger.error(f"Could not find user or channel: {channel}")
 
 
 def media_downloader(argv):
+    logger = setup_logging(is_mcp_server=False)
     video_downloader_instance = MediaDownloader()
     try:
         opts, args = getopt.getopt(
@@ -227,6 +211,7 @@ def media_downloader(argv):
         )
     except getopt.GetoptError:
         usage()
+        logger.error("Incorrect arguments")
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-h", "--help"):
@@ -241,8 +226,7 @@ def media_downloader(argv):
         elif opt in ("-f", "--file"):
             video_downloader_instance.open_file(arg)
         elif opt in ("-l", "--links"):
-            url_list = arg.replace(" ", "")
-            url_list = url_list.split(",")
+            url_list = arg.replace(" ", "").split(",")
             for url in url_list:
                 video_downloader_instance.append_link(url)
 
@@ -251,16 +235,16 @@ def media_downloader(argv):
 
 def usage():
     print(
-        f"Media-Downloader: A tool to download any video off the internet!\n"
-        f"\nUsage:\n"
-        f"-h | --help      [ See usage ]\n"
-        f"-a | --audio     [ Download audio only ]\n"
-        f"-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n"
-        f"-d | --directory [ Location where the images will be saved ]\n"
-        f"-f | --file      [ Text file to read the URLs from ]\n"
-        f"-l | --links     [ Comma separated URLs (No spaces) ]\n"
-        f"\nExample:\n"
-        f'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n'
+        "Media-Downloader: A tool to download any video off the internet!\n"
+        "\nUsage:\n"
+        "-h | --help      [ See usage ]\n"
+        "-a | --audio     [ Download audio only ]\n"
+        "-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n"
+        "-d | --directory [ Location where the images will be saved ]\n"
+        "-f | --file      [ Text file to read the URLs from ]\n"
+        "-l | --links     [ Comma separated URLs (No spaces) ]\n"
+        "\nExample:\n"
+        'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n'
     )
 
 
