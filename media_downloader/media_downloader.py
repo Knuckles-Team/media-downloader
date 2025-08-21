@@ -180,7 +180,7 @@ class MediaDownloader:
         pool = Pool(processes=os.cpu_count())
         try:
             results = pool.map(self.download_video, self.links)
-            self.reset_links()
+            self.links = []
             for result in results:
                 if result and os.path.exists(result):
                     return result
