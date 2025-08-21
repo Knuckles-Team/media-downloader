@@ -51,8 +51,8 @@ async def download_media(
         file_path = downloader.download_video(link=video_url)
 
         # Check if the file was downloaded
-        if not file_path:
-            raise RuntimeError("Download failed or file not found")
+#         if not file_path:
+#             raise RuntimeError("Download failed or file not found")
 
         logger.debug(f"Download completed, file path: {file_path}")
         return file_path
