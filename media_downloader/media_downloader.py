@@ -51,61 +51,15 @@ class YtDlpLogger:
 
 
 class MediaDownloader:
-
-    def __init__(
-        self, links: list = [], download_directory: str = None, audio: bool = False
-    ):
-        self.links = links
-        if download_directory:
-            self.download_directory = download_directory
-        else:
-            self.download_directory = f'{os.path.expanduser("~")}/Downloads'
-        self.audio = audio
-        self.logger = logging.getLogger("MediaDownloader")
-
-    def open_file(self, file):
-        youtube_urls = open(file, "r")
-        for url in youtube_urls:
-            self.links.append(url)
-        self.links = list(dict.fromkeys(self.links))
-
-    def get_save_path(self) -> str:
-        return self.download_directory
-
-    def set_save_path(self, download_directory):
-        self.download_directory = download_directory.replace(os.sep, "/")
-        self.logger.debug(f"Set download directory to: {self.download_directory}")
-
-    def reset_links(self):
-        self.logger.debug("Resetting links")
+    def __init__(self):
         self.links = []
+        self.download_directory = f"{os.path.expanduser('~')}/Downloads"
+        self.audio = False
+        self.logger = logging.getLogger("MediaDownloader")
+        self.progress_callback = None  # Store callback for progress updates
 
-    def extend_links(self, urls):
-        self.logger.debug(f"Extending links: {urls}")
-        self.links.extend(urls)
-        self.links = list(dict.fromkeys(self.links))
-
-    def append_link(self, url):
-        self.logger.debug(f"Appending link: {url}")
-        self.links.append(url)
-        self.links = list(dict.fromkeys(self.links))
-
-    def get_links(self) -> List[str]:
-        return self.links
-
-    def set_audio(self, audio=False):
-        self.audio = audio
-        self.logger.debug(f"Audio mode set to: {audio}")
-
-    def download_all(self):
-        self.logger.debug(f"Downloading {len(self.links)} links")
-        pool = Pool(processes=os.cpu_count())
-        try:
-            pool.map(self.download_video, self.links)
-        finally:
-            pool.close()
-            pool.join()
-        self.reset_links()
+    def set_progress_callback(self, callback):
+        self.progress_callback = callback
 
     def download_video(self, link):
         self.logger.debug(f"Downloading video: {link}")
@@ -125,10 +79,10 @@ class MediaDownloader:
         ydl_opts = {
             "format": "bestaudio/best" if self.audio else "best",
             "outtmpl": outtmpl,
-            "quiet": True,  # Suppress yt_dlp console output
-            "no_warnings": True,  # Suppress warnings
-            "progress_with_newline": False,  # Disable progress output
-            "logger": YtDlpLogger(self.logger),  # Use custom logger
+            "quiet": True,
+            "no_warnings": True,
+            "progress_hooks": [self.progress_hook],  # Add progress hook
+            "logger": YtDlpLogger(self.logger),
         }
         if self.audio:
             ydl_opts["postprocessors"] = [
@@ -142,7 +96,7 @@ class MediaDownloader:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(link, download=True)
-                return ydl.prepare_filename(info)  # Return the actual file path
+                return ydl.prepare_filename(info)
         except Exception as e:
             self.logger.error(f"Failed to download {link}: {str(e)}")
             try:
@@ -156,43 +110,18 @@ class MediaDownloader:
                 return None
 
     def get_channel_videos(self, channel, limit=-1):
-        self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
-        username = channel
-        attempts = 0
-        while attempts < 3:
-            url = f"https://www.youtube.com/user/{username}/videos"
-            self.logger.debug(f"Trying URL: {url}")
-            page = requests.get(url).content
-            data = str(page).split(" ")
-            item = 'href="/watch?'
-            vids = [
-                line.replace('href="', "youtube.com") for line in data if item in line
-            ]
-            if vids:
-                self.logger.debug(f"Found {len(vids)} videos")
-                x = 0
-                for vid in vids:
-                    if limit < 0 or x < limit:
-                        self.append_link(vid)
-                    x += 1
-                return
-            else:
-                url = f"https://www.youtube.com/c/{channel}/videos"
+            self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
+            username = channel
+            attempts = 0
+            while attempts < 3:
+                url = f"https://www.youtube.com/user/{username}/videos"
                 self.logger.debug(f"Trying URL: {url}")
                 page = requests.get(url).content
                 data = str(page).split(" ")
-                item = "https://i.ytimg.com/vi/"
-                vids = []
-                for line in data:
-                    if item in line:
-                        try:
-                            found = re.search(
-                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
-                            ).group(1)
-                            vid = f"https://www.youtube.com/watch?v={found}"
-                            vids.append(vid)
-                        except AttributeError:
-                            continue
+                item = 'href="/watch?'
+                vids = [
+                    line.replace('href="', "youtube.com") for line in data if item in line
+                ]
                 if vids:
                     self.logger.debug(f"Found {len(vids)} videos")
                     x = 0
@@ -201,8 +130,59 @@ class MediaDownloader:
                             self.append_link(vid)
                         x += 1
                     return
-            attempts += 1
-        self.logger.error(f"Could not find user or channel: {channel}")
+                else:
+                    url = f"https://www.youtube.com/c/{channel}/videos"
+                    self.logger.debug(f"Trying URL: {url}")
+                    page = requests.get(url).content
+                    data = str(page).split(" ")
+                    item = "https://i.ytimg.com/vi/"
+                    vids = []
+                    for line in data:
+                        if item in line:
+                            try:
+                                found = re.search(
+                                    "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
+                                ).group(1)
+                                vid = f"https://www.youtube.com/watch?v={found}"
+                                vids.append(vid)
+                            except AttributeError:
+                                continue
+                    if vids:
+                        self.logger.debug(f"Found {len(vids)} videos")
+                        x = 0
+                        for vid in vids:
+                            if limit < 0 or x < limit:
+                                self.append_link(vid)
+                            x += 1
+                        return
+                attempts += 1
+            self.logger.error(f"Could not find user or channel: {channel}")
+
+    def progress_hook(self, d):
+        if self.progress_callback and d["status"] == "downloading":
+            if d.get("total_bytes") and d.get("downloaded_bytes"):
+                progress = (d["downloaded_bytes"] / d["total_bytes"]) * 100
+                self.progress_callback(progress=progress, total=100)
+            elif d.get("downloaded_bytes"):
+                # Indeterminate progress if total_bytes is unavailable
+                self.progress_callback(progress=d["downloaded_bytes"])
+        elif d["status"] == "finished":
+            if self.progress_callback:
+                self.progress_callback(progress=100, total=100)
+
+    def download_all(self):
+        self.logger.debug(f"Downloading {len(self.links)} links")
+        pool = Pool(processes=os.cpu_count())
+        try:
+            results = pool.map(self.download_video, self.links)
+            self.reset_links()
+            for result in results:
+                if result and os.path.exists(result):
+                    return result
+            return None
+        finally:
+            pool.close()
+            pool.join()
 
 
 def media_downloader(argv):

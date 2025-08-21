@@ -32,27 +32,40 @@ async def download_media(
         RuntimeError: If the download fails.
     """
     logger = logging.getLogger("MediaDownloader")
-    logger.debug(
-        f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
-    )
+    logger.debug(f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}")
 
     try:
-        # Validate inputs
         if not video_url or not download_directory:
             raise ValueError("video_url and download_directory must not be empty")
-
-        # Ensure the download directory exists
         os.makedirs(download_directory, exist_ok=True)
 
-        # Initialize MediaDownloader
         downloader = MediaDownloader(
             download_directory=download_directory, audio=audio_only
         )
+
+        # Set progress callback for yt_dlp
+        async def progress_callback(progress, total=None):
+            if ctx:
+                await ctx.report_progress(progress=progress, total=total)
+                logger.debug(f"Reported progress: {progress}/{total}")
+
+        downloader.set_progress_callback(progress_callback)
+
+        # Report initial progress
+        if ctx:
+            await ctx.report_progress(progress=0, total=100)
+            logger.debug("Reported initial progress: 0/100")
+
+        # Perform the download
         file_path = downloader.download_video(link=video_url)
 
-        # Check if the file was downloaded
-#         if not file_path:
-#             raise RuntimeError("Download failed or file not found")
+        if not file_path or not os.path.exists(file_path):
+            raise RuntimeError("Download failed or file not found")
+
+        # Report completion
+        if ctx:
+            await ctx.report_progress(progress=100, total=100)
+            logger.debug("Reported final progress: 100/100")
 
         logger.debug(f"Download completed, file path: {file_path}")
         return file_path
