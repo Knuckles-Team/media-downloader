@@ -15,7 +15,7 @@ mcp = FastMCP(name="MediaDownloaderServer")
 
 @mcp.tool()
 async def download_media(
-    video_url: str, download_directory: str = ".", audio_only: bool = False, ctx: Context = None
+    video_url: str, download_directory: str = None, audio_only: bool = False, ctx: Context = None
 ) -> str:
     """Downloads media from a given URL to the specified directory.
 
@@ -35,8 +35,10 @@ async def download_media(
     logger.debug(f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}")
 
     try:
-        if not video_url or not download_directory:
-            raise ValueError("video_url and download_directory must not be empty")
+        if not video_url:
+            raise ValueError("video_url must not be empty")
+
+        download_directory = f'{os.path.expanduser("~")}/Downloads'
         os.makedirs(download_directory, exist_ok=True)
 
         downloader = MediaDownloader(
