@@ -6,12 +6,14 @@ import sys
 from media_downloader import MediaDownloader
 from fastmcp import FastMCP
 
-mcp = FastMCP("MediaDownloaderServer")
+mcp = FastMCP(
+    name="MediaDownloaderServer",
+)
 
 
 @mcp.tool()
 async def download_media(
-    video_url: str, download_directory: str, audio_only: bool = False
+    video_url: str, download_directory: str = ".", audio_only: bool = False
 ) -> str:
     """Downloads media from a given URL to the specified directory.
 
@@ -55,6 +57,7 @@ async def download_media(
         raise RuntimeError(f"Failed to download media: {str(e)}")
 
 
+
 def media_downloader_mcp(argv):
     transport = "stdio"
     host = "0.0.0.0"
@@ -78,12 +81,14 @@ def media_downloader_mcp(argv):
             port = arg
     if transport == "stdio":
         mcp.run(transport="stdio")
+    elif transport == "http":
+        mcp.run(transport="http", host=host, port=port)
     else:
-        mcp.run(transport="tcp", host=host, port=port)
-
+        print("Transport not supported")
+        sys.exit(1)
 
 def client():
-    # Connect to the server (update host/port if using TCP)
+    # Connect to the server (update host/port if using http)
     client = MCPClient(host="localhost", port=5000)
 
     # Call the download_media tool

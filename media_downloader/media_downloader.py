@@ -10,7 +10,6 @@ from typing import List
 import requests
 import yt_dlp
 from multiprocessing import Pool
-from media_downloader.version import __version__, __author__, __credits__
 
 
 class StdOutLogger(object):
@@ -253,9 +252,6 @@ def media_downloader(argv):
 def usage():
     print(
         f"Media-Downloader: A tool to download any video off the internet!\n"
-        f"Version: {__version__}\n"
-        f"Author: {__author__}\n"
-        f"Credits: {__credits__}\n"
         f"\nUsage:\n"
         f"-h | --help      [ See usage ]\n"
         f"-a | --audio     [ Download audio only ]\n"
