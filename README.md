@@ -92,16 +92,11 @@ video_downloader_instance.get_channel_videos("YT-Channel Name")
 
 Use with AI
 
-```bash
-python -m media_downloader_mcp
-```
-
 ```json
 {
   "mcpServers": {
     "media_downloader": {
-      "command": "python",
-      "args": ["-m", "media_downloader_mcp"]
+      "command": "media-downloader-mcp"
     }
   }
 }
