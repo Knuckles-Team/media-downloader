@@ -5,7 +5,6 @@ import os
 import sys
 import re
 import getopt
-from typing import List
 import logging
 import requests
 import yt_dlp
@@ -52,8 +51,8 @@ class YtDlpLogger:
 
 class MediaDownloader:
     def __init__(
-            self, links: list = [], download_directory: str = None, audio: bool = False
-        ):
+        self, links: list = [], download_directory: str = None, audio: bool = False
+    ):
         self.links = links
         if download_directory:
             self.download_directory = download_directory
@@ -115,18 +114,43 @@ class MediaDownloader:
                 return None
 
     def get_channel_videos(self, channel, limit=-1):
-            self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
-            username = channel
-            attempts = 0
-            while attempts < 3:
-                url = f"https://www.youtube.com/user/{username}/videos"
+        self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
+        username = channel
+        attempts = 0
+        while attempts < 3:
+            url = f"https://www.youtube.com/user/{username}/videos"
+            self.logger.debug(f"Trying URL: {url}")
+            page = requests.get(url).content
+            data = str(page).split(" ")
+            item = 'href="/watch?'
+            vids = [
+                line.replace('href="', "youtube.com") for line in data if item in line
+            ]
+            if vids:
+                self.logger.debug(f"Found {len(vids)} videos")
+                x = 0
+                for vid in vids:
+                    if limit < 0 or x < limit:
+                        self.append_link(vid)
+                    x += 1
+                return
+            else:
+                url = f"https://www.youtube.com/c/{channel}/videos"
                 self.logger.debug(f"Trying URL: {url}")
                 page = requests.get(url).content
                 data = str(page).split(" ")
-                item = 'href="/watch?'
-                vids = [
-                    line.replace('href="', "youtube.com") for line in data if item in line
-                ]
+                item = "https://i.ytimg.com/vi/"
+                vids = []
+                for line in data:
+                    if item in line:
+                        try:
+                            found = re.search(
+                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
+                            ).group(1)
+                            vid = f"https://www.youtube.com/watch?v={found}"
+                            vids.append(vid)
+                        except AttributeError:
+                            continue
                 if vids:
                     self.logger.debug(f"Found {len(vids)} videos")
                     x = 0
@@ -135,33 +159,8 @@ class MediaDownloader:
                             self.append_link(vid)
                         x += 1
                     return
-                else:
-                    url = f"https://www.youtube.com/c/{channel}/videos"
-                    self.logger.debug(f"Trying URL: {url}")
-                    page = requests.get(url).content
-                    data = str(page).split(" ")
-                    item = "https://i.ytimg.com/vi/"
-                    vids = []
-                    for line in data:
-                        if item in line:
-                            try:
-                                found = re.search(
-                                    "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
-                                ).group(1)
-                                vid = f"https://www.youtube.com/watch?v={found}"
-                                vids.append(vid)
-                            except AttributeError:
-                                continue
-                    if vids:
-                        self.logger.debug(f"Found {len(vids)} videos")
-                        x = 0
-                        for vid in vids:
-                            if limit < 0 or x < limit:
-                                self.append_link(vid)
-                            x += 1
-                        return
-                attempts += 1
-            self.logger.error(f"Could not find user or channel: {channel}")
+            attempts += 1
+        self.logger.error(f"Could not find user or channel: {channel}")
 
     def progress_hook(self, d):
         if self.progress_callback and d["status"] == "downloading":

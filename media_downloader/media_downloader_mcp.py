@@ -16,24 +16,30 @@ mcp = FastMCP(name="MediaDownloaderServer")
 
 @mcp.tool()
 async def download_media(
-    video_url: str, download_directory: Optional[str] = None, audio_only: Optional[bool] = False, ctx: Context = None
+    video_url: str,
+    download_directory: Optional[str] = None,
+    audio_only: Optional[bool] = False,
+    ctx: Context = None,
 ) -> str:
     """Downloads media from a given URL to the specified directory.
 
     Args:
         video_url (str): The URL of the media to download.
-        download_directory (str): The directory where the media will be saved.
+        download_directory (Optional[str]): The directory where the media will be saved. If None, uses default directory.
         audio_only (bool): If True, downloads only the audio. Defaults to False.
+        ctx (Context, optional): MCP context for progress reporting.
 
     Returns:
         str: The path to the downloaded media file.
 
     Raises:
-        ValueError: If the URL or directory is invalid.
+        ValueError: If the URL is invalid.
         RuntimeError: If the download fails.
     """
     logger = logging.getLogger("MediaDownloader")
-    logger.debug(f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}")
+    logger.debug(
+        f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
+    )
 
     try:
         if not video_url:
