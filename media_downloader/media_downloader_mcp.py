@@ -45,16 +45,13 @@ async def download_media(
         os.makedirs(download_directory, exist_ok=True)
 
         # Initialize MediaDownloader
-        downloader = MediaDownloader()
-        downloader.set_audio(audio=audio_only)
-        downloader.set_save_path(download_directory)
-        downloader.append_link(video_url)
-
-        # Perform the download
-        file_path = downloader.download_all()
+        downloader = MediaDownloader(
+            download_directory=download_directory, audio=audio_only
+        )
+        file_path = downloader.download_video(link=video_url)
 
         # Check if the file was downloaded
-        if not file_path or not os.path.exists(file_path):
+        if not file_path:
             raise RuntimeError("Download failed or file not found")
 
         logger.debug(f"Download completed, file path: {file_path}")
