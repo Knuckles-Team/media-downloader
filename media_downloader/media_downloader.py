@@ -51,10 +51,15 @@ class YtDlpLogger:
 
 
 class MediaDownloader:
-    def __init__(self):
-        self.links = []
-        self.download_directory = f"{os.path.expanduser('~')}/Downloads"
-        self.audio = False
+    def __init__(
+            self, links: list = [], download_directory: str = None, audio: bool = False
+        ):
+        self.links = links
+        if download_directory:
+            self.download_directory = download_directory
+        else:
+            self.download_directory = f'{os.path.expanduser("~")}/Downloads'
+        self.audio = audio
         self.logger = logging.getLogger("MediaDownloader")
         self.progress_callback = None  # Store callback for progress updates
 
