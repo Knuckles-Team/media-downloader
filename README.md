@@ -36,6 +36,20 @@ This repository is actively maintained - Contributions are welcome!
 - Vimeo
 - And More!
 
+#### Using an an MCP Server:
+
+AI Prompt:
+```text
+Download me this video: https://youtube.com/watch?askdjfa
+```
+
+AI Response:
+```text
+Sure thing, the video has been downloaded to:
+
+"C:\Users\User\Downloads\YouTube Video - Episode 1.mp4"
+```
+
 <details>
   <summary><b>Usage:</b></summary>
 
