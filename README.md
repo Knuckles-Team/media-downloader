@@ -67,12 +67,14 @@ Sure thing, the video has been downloaded to:
 <details>
   <summary><b>Example:</b></summary>
 
-Run through CLI
+### Use in CLI
+
 ```bash
 media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
 ```
 
-Use directly in Python
+### Use in Python
+
 ```python
 # Import library
 from media_downloader import MediaDownloader
@@ -104,7 +106,29 @@ video_downloader_instance.open_file("FILE")
 video_downloader_instance.get_channel_videos("YT-Channel Name")
 ```
 
-Use with AI
+### Use with AI
+
+Deploy MCP Server as a Service
+```bash
+docker pull knucklessg1/media-downloader:latest
+```
+
+Modify the `compose.yml`
+
+```compose
+services:
+  media-downloader-mcp:
+    image: knucklessg1/media-downloader:latest
+    volumes:
+      - downloads:/root/Downloads
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - 8000:8000
+```
+
+Configure `mcp.json`
 
 ```json
 {
