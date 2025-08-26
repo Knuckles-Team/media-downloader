@@ -13,8 +13,26 @@ setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
 
 mcp = FastMCP(name="MediaDownloaderServer")
 
+def to_boolean(string):
+    # Normalize the string: strip whitespace and convert to lowercase
+    normalized = str(string).strip().lower()
+
+    # Define valid true/false values
+    true_values = {'t', 'true', 'y', 'yes', '1'}
+    false_values = {'f', 'false', 'n', 'no', '0'}
+
+    if normalized in true_values:
+        return True
+    elif normalized in false_values:
+        return False
+    else:
+        raise ValueError(f"Cannot convert '{string}' to boolean")
+
 environment_download_directory = os.environ.get("DOWNLOAD_DIRECTORY", None)
 environment_audio_only = os.environ.get("AUDIO_ONLY", False)
+
+if environment_audio_only:
+    environment_audio_only = to_boolean(environment_audio_only)
 
 
 @mcp.tool()
