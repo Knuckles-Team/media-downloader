@@ -13,12 +13,15 @@ setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
 
 mcp = FastMCP(name="MediaDownloaderServer")
 
+environment_download_directory = os.environ.get("DOWNLOAD_DIRECTORY", None)
+environment_audio_only = os.environ.get("AUDIO_ONLY", False)
+
 
 @mcp.tool()
 async def download_media(
     video_url: str,
-    download_directory: Optional[str] = None,
-    audio_only: Optional[bool] = False,
+    download_directory: Optional[str] = environment_download_directory,
+    audio_only: Optional[bool] = environment_audio_only,
     ctx: Context = None,
 ) -> str:
     """Downloads media from a given URL to the specified directory.

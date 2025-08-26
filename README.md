@@ -132,7 +132,12 @@ Configure `mcp.json`
 {
   "mcpServers": {
     "media_downloader": {
-      "command": "media-downloader-mcp"
+      "command": "media-downloader-mcp",
+      "env": {
+        "DOWNLOAD_DIRECTORY": "~/Downloads", // Optional - Can be specified at prompt
+        "AUDIO_ONLY": false // Optional - Can be specified at prompt
+      },
+      "timeout": 300000
     }
   }
 }
