@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 1.0.9*
+*Version: 1.0.10*
 
 Download videos and audio from the internet!
 
@@ -135,7 +135,13 @@ Configure `mcp.json`
 {
   "mcpServers": {
     "media_downloader": {
-      "command": "media-downloader-mcp",
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "media-downloader",
+        "media-downloader-mcp"
+      ],
       "env": {
         "DOWNLOAD_DIRECTORY": "~/Downloads", // Optional - Can be specified at prompt
         "AUDIO_ONLY": false // Optional - Can be specified at prompt
