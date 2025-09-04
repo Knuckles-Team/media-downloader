@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=80.9.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "media-downloader"
+version = "1.0.8"
+description = "Download audio/videos from the internet!\nHost an MCP Server for Agentic AI to download videos!"
+readme = "README.md"
+authors = [{ name = "Audel Rouhi", email = "knucklessg1@gmail.com" }]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: Public Domain",
+    "Environment :: Console",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "yt-dlp>=2025.8.20",
+    "fastmcp>=2.11.3"
+]
+
+[project.scripts]
+media-downloader = "media_downloader.media_downloader:main"
+media-downloader-mcp = "media_downloader.media_downloader_mcp:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools]
+include-package-data = true
+package-data = { "media_downloader" = ["media_downloader"] }
