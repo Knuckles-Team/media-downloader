@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 1.0.8*
+*Version: 1.0.9*
 
 Download videos and audio from the internet!
 
@@ -36,7 +36,20 @@ This repository is actively maintained - Contributions are welcome!
 - Vimeo
 - And More!
 
-#### Using an an MCP Server:
+<details>
+  <summary><b>Usage:</b></summary>
+
+### CLI
+| Short Flag | Long Flag   | Description                                 |
+|------------|-------------|---------------------------------------------|
+| -h         | --help      | See usage                                   |
+| -a         | --audio     | Download audio only                         |
+| -c         | --channel   | YouTube Channel/User - Downloads all videos |
+| -f         | --file      | File with video links                       |
+| -l         | --links     | Comma separated links                       |
+| -d         | --directory | Location to save videos                     |
+
+### Using an an MCP Server:
 
 AI Prompt:
 ```text
@@ -49,18 +62,6 @@ Sure thing, the video has been downloaded to:
 
 "C:\Users\User\Downloads\YouTube Video - Episode 1.mp4"
 ```
-
-<details>
-  <summary><b>Usage:</b></summary>
-
-| Short Flag | Long Flag   | Description                                 |
-|------------|-------------|---------------------------------------------|
-| -h         | --help      | See usage                                   |
-| -a         | --audio     | Download audio only                         |
-| -c         | --channel   | YouTube Channel/User - Downloads all videos |
-| -f         | --file      | File with video links                       |
-| -l         | --links     | Comma separated links                       |
-| -d         | --directory | Location to save videos                     |
 
 </details>
 
