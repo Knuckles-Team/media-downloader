@@ -7,6 +7,7 @@ import logging
 from typing import Optional
 from media_downloader import MediaDownloader, setup_logging
 from fastmcp import FastMCP, Context
+from pydantic import Field
 
 # Initialize logging for MCP server (logs to file)
 setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
@@ -34,29 +35,25 @@ environment_audio_only = os.environ.get("AUDIO_ONLY", False)
 if environment_audio_only:
     environment_audio_only = to_boolean(environment_audio_only)
 
-
-@mcp.tool()
+@mcp.tool(
+    annotations={
+        "title": "Download Media",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    tags={"collection_management"},
+)
 async def download_media(
-    video_url: str,
-    download_directory: Optional[str] = environment_download_directory,
-    audio_only: Optional[bool] = environment_audio_only,
-    ctx: Context = None,
+    video_url: str = Field(description="Video URL to Download", default=None),
+    download_directory: Optional[str] = Field(
+        description="The directory where the media will be saved. If None, uses default directory.",
+        default=environment_download_directory),
+    audio_only: Optional[bool] = Field(description="Downloads only the audio", default=environment_audio_only),
+    ctx: Context = Field(description="MCP context for progress reporting.", default=None),
 ) -> str:
-    """Downloads media from a given URL to the specified directory.
-
-    Args:
-        video_url (str): The URL of the media to download.
-        download_directory (Optional[str]): The directory where the media will be saved. If None, uses default directory.
-        audio_only (bool): If True, downloads only the audio. Defaults to False.
-        ctx (Context, optional): MCP context for progress reporting.
-
-    Returns:
-        str: The path to the downloaded media file.
-
-    Raises:
-        ValueError: If the URL is invalid.
-        RuntimeError: If the download fails.
-    """
+    """Downloads media from a given URL to the specified directory."""
     logger = logging.getLogger("MediaDownloader")
     logger.debug(
         f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
