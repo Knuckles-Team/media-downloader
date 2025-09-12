@@ -4,7 +4,7 @@
 import os
 import sys
 import re
-import getopt
+import argparse
 import logging
 import requests
 import yt_dlp
@@ -64,6 +64,12 @@ class MediaDownloader:
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
+
+    def open_file(self, file):
+        youtube_urls = open(file, "r")
+        for url in youtube_urls:
+            self.links.append(url)
+        self.links = list(dict.fromkeys(self.links))
 
     def download_video(self, link):
         self.logger.debug(f"Downloading video: {link}")
@@ -189,39 +195,6 @@ class MediaDownloader:
             pool.join()
 
 
-def media_downloader(argv):
-    logger = setup_logging(is_mcp_server=False)
-    video_downloader_instance = MediaDownloader()
-    try:
-        opts, args = getopt.getopt(
-            argv,
-            "hac:d:f:l:",
-            ["help", "audio", "channel=", "directory=", "file=", "links="],
-        )
-    except getopt.GetoptError:
-        usage()
-        logger.error("Incorrect arguments")
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif opt in ("-a", "--audio"):
-            video_downloader_instance.audio = True
-        elif opt in ("-c", "--channel"):
-            video_downloader_instance.get_channel_videos(arg)
-        elif opt in ("-d", "--directory"):
-            video_downloader_instance.download_directory = arg
-        elif opt in ("-f", "--file"):
-            video_downloader_instance.open_file(arg)
-        elif opt in ("-l", "--links"):
-            url_list = arg.replace(" ", "").split(",")
-            for url in url_list:
-                video_downloader_instance.links.extend(url_list)
-
-    video_downloader_instance.download_all()
-
-
 def usage():
     print(
         "Media-Downloader: A tool to download any video off the internet!\n"
@@ -237,9 +210,38 @@ def usage():
     )
 
 
-def main():
-    media_downloader(sys.argv[1:])
+def media_downloader():
+    parser = argparse.ArgumentParser(description="Download media from various sources.")
+    parser.add_argument(
+        "-a", "--audio", action="store_true", help="Download audio only"
+    )
+    parser.add_argument("-c", "--channel", help="Download videos from a channel URL")
+    parser.add_argument("-d", "--directory", help="Specify download directory")
+    parser.add_argument("-f", "--file", help="Read URLs from a file")
+    parser.add_argument(
+        "-l", "--links", help="Comma-separated list of URLs to download"
+    )
+
+    args = parser.parse_args()
+
+    logger = setup_logging(is_mcp_server=False)
+    video_downloader_instance = MediaDownloader()
+
+    if args.audio:
+        video_downloader_instance.audio = True
+    if args.channel:
+        video_downloader_instance.get_channel_videos(args.channel)
+    if args.directory:
+        video_downloader_instance.download_directory = args.directory
+    if args.file:
+        video_downloader_instance.open_file(args.file)
+    if args.links:
+        url_list = args.links.replace(" ", "").split(",")
+        video_downloader_instance.links.extend(url_list)
+
+    logger.info("Kicking off downloads...")
+    video_downloader_instance.download_all()
 
 
 if __name__ == "__main__":
-    media_downloader(sys.argv[1:])
+    media_downloader()

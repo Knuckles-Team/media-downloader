@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
-import getopt
+import argparse
 import os
 import sys
 import logging
@@ -14,13 +14,14 @@ setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
 
 mcp = FastMCP(name="MediaDownloaderServer")
 
+
 def to_boolean(string):
     # Normalize the string: strip whitespace and convert to lowercase
     normalized = str(string).strip().lower()
 
     # Define valid true/false values
-    true_values = {'t', 'true', 'y', 'yes', '1'}
-    false_values = {'f', 'false', 'n', 'no', '0'}
+    true_values = {"t", "true", "y", "yes", "1"}
+    false_values = {"f", "false", "n", "no", "0"}
 
     if normalized in true_values:
         return True
@@ -29,11 +30,6 @@ def to_boolean(string):
     else:
         raise ValueError(f"Cannot convert '{string}' to boolean")
 
-environment_download_directory = os.environ.get("DOWNLOAD_DIRECTORY", None)
-environment_audio_only = os.environ.get("AUDIO_ONLY", False)
-
-if environment_audio_only:
-    environment_audio_only = to_boolean(environment_audio_only)
 
 @mcp.tool(
     annotations={
@@ -49,9 +45,15 @@ async def download_media(
     video_url: str = Field(description="Video URL to Download", default=None),
     download_directory: Optional[str] = Field(
         description="The directory where the media will be saved. If None, uses default directory.",
-        default=environment_download_directory),
-    audio_only: Optional[bool] = Field(description="Downloads only the audio", default=environment_audio_only),
-    ctx: Context = Field(description="MCP context for progress reporting.", default=None),
+        default=os.environ.get("DOWNLOAD_DIRECTORY", None),
+    ),
+    audio_only: Optional[bool] = Field(
+        description="Downloads only the audio",
+        default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
+    ),
+    ctx: Context = Field(
+        description="MCP context for progress reporting.", default=None
+    ),
 ) -> str:
     """Downloads media from a given URL to the specified directory."""
     logger = logging.getLogger("MediaDownloader")
@@ -101,47 +103,37 @@ async def download_media(
         raise RuntimeError(f"Failed to download media: {str(e)}")
 
 
-def media_downloader_mcp(argv):
-    transport = "stdio"
-    host = "0.0.0.0"
-    port = 8000
-    try:
-        opts, args = getopt.getopt(
-            argv,
-            "ht:h:p:",
-            ["help", "transport=", "host=", "port="],
-        )
-    except getopt.GetoptError:
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            sys.exit()
-        elif opt in ("-t", "--transport"):
-            transport = arg
-        elif opt in ("-h", "--host"):
-            host = arg
-        elif opt in ("-p", "--port"):
-            try:
-                port = int(arg)  # Attempt to convert port to integer
-                if not (0 <= port <= 65535):  # Valid port range
-                    print(f"Error: Port {arg} is out of valid range (0-65535).")
-                    sys.exit(1)
-            except ValueError:
-                print(f"Error: Port {arg} is not a valid integer.")
-                sys.exit(1)
-    if transport == "stdio":
+def media_downloader_mcp():
+    parser = argparse.ArgumentParser(description="Run media downloader MCP server.")
+    parser.add_argument(
+        "-t",
+        "--transport",
+        default="stdio",
+        choices=["stdio", "http"],
+        help="Transport method (stdio or http, default: stdio)",
+    )
+    parser.add_argument(
+        "-h", "--host", default="0.0.0.0", help="Host address (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "-p", "--port", type=int, default=8000, help="Port number (default: 8000)"
+    )
+
+    args = parser.parse_args()
+
+    if args.port < 0 or args.port > 65535:
+        print(f"Error: Port {args.port} is out of valid range (0-65535).")
+        sys.exit(1)
+
+    if args.transport == "stdio":
         mcp.run(transport="stdio")
-    elif transport == "http":
-        mcp.run(transport="http", host=host, port=port)
+    elif args.transport == "http":
+        mcp.run(transport="http", host=args.host, port=args.port)
     else:
         logger = logging.getLogger("MediaDownloader")
         logger.error("Transport not supported")
         sys.exit(1)
 
 
-def main():
-    media_downloader_mcp(sys.argv[1:])
-
-
 if __name__ == "__main__":
-    media_downloader_mcp(sys.argv[1:])
+    media_downloader_mcp()
