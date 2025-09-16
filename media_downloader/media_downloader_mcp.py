@@ -113,7 +113,7 @@ def media_downloader_mcp():
         help="Transport method (stdio or http, default: stdio)",
     )
     parser.add_argument(
-        "-h", "--host", default="0.0.0.0", help="Host address (default: 0.0.0.0)"
+        "-s", "--host", default="0.0.0.0", help="Host address (default: 0.0.0.0)"
     )
     parser.add_argument(
         "-p", "--port", type=int, default=8000, help="Port number (default: 8000)"
