@@ -55,7 +55,7 @@ async def download_media(
         description="MCP context for progress reporting.", default=None
     ),
 ) -> str:
-    """Downloads media from a given URL to the specified directory."""
+    """Downloads media from a given URL to the specified directory. Download as a video or audio file"""
     logger = logging.getLogger("MediaDownloader")
     logger.debug(
         f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
