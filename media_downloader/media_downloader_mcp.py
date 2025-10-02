@@ -31,7 +31,6 @@ def to_boolean(string: Union[str, bool] = None) -> bool:
         raise ValueError(f"Cannot convert '{string}' to boolean")
 
 
-
 @mcp.tool(
     annotations={
         "title": "Download Media",
@@ -43,18 +42,18 @@ def to_boolean(string: Union[str, bool] = None) -> bool:
     tags={"collection_management"},
 )
 async def download_media(
-        video_url: str = Field(description="Video URL to Download", default=None),
-        download_directory: Optional[str] = Field(
-            description="The directory where the media will be saved. If None, uses default directory.",
-            default=os.environ.get("DOWNLOAD_DIRECTORY", None),
-        ),
-        audio_only: Optional[bool] = Field(
-            description="Downloads only the audio",
-            default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
-        ),
-        ctx: Context = Field(
-            description="MCP context for progress reporting.", default=None
-        ),
+    video_url: str = Field(description="Video URL to Download", default=None),
+    download_directory: Optional[str] = Field(
+        description="The directory where the media will be saved. If None, uses default directory.",
+        default=os.environ.get("DOWNLOAD_DIRECTORY", None),
+    ),
+    audio_only: Optional[bool] = Field(
+        description="Downloads only the audio",
+        default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
+    ),
+    ctx: Context = Field(
+        description="MCP context for progress reporting.", default=None
+    ),
 ) -> Dict[str, Any]:
     """
     Downloads media from a given URL to the specified directory. Download as a video or audio file.
@@ -73,9 +72,9 @@ async def download_media(
                 "data": {
                     "video_url": video_url,
                     "download_directory": download_directory,
-                    "audio_only": audio_only
+                    "audio_only": audio_only,
                 },
-                "error": "video_url must not be empty"
+                "error": "video_url must not be empty",
             }
 
         if download_directory:
@@ -111,9 +110,9 @@ async def download_media(
                 "data": {
                     "video_url": video_url,
                     "download_directory": download_directory,
-                    "audio_only": audio_only
+                    "audio_only": audio_only,
                 },
-                "error": "Download failed or file not found"
+                "error": "Download failed or file not found",
             }
 
         # Report completion
@@ -129,20 +128,22 @@ async def download_media(
                 "file_path": file_path,
                 "download_directory": download_directory,
                 "audio_only": audio_only,
-                "video_url": video_url
-            }
+                "video_url": video_url,
+            },
         }
     except Exception as e:
-        logger.error(f"Failed to download media: {str(e)}\nParams: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}")
+        logger.error(
+            f"Failed to download media: {str(e)}\nParams: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
+        )
         return {
             "status": 500,
             "message": "Failed to download media",
             "data": {
                 "video_url": video_url,
                 "download_directory": download_directory,
-                "audio_only": audio_only
+                "audio_only": audio_only,
             },
-            "error": str(e)
+            "error": str(e),
         }
 
 
