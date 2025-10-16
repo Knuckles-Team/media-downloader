@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.1.7*
+*Version: 2.1.8*
 
 Download videos and audio from the internet!
 
@@ -152,7 +152,23 @@ Configure `mcp.json`
 }
 
 ```
+Run as a docker container:
 
+```yaml
+services:
+  media-downloader-mcp:
+    image: docker.io/knucklessg1/media-downloader:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - "/home/genius/Downloads:/downloads"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - TRANSPORT=http
+      - DOWNLOAD_DIRECTORY=/downloads
+      - AUDIO_ONLY=false
+```
 </details>
 
 <details>
