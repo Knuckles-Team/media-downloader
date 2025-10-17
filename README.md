@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.1.8*
+*Version: 2.1.9*
 
 Download videos and audio from the internet!
 
@@ -49,7 +49,52 @@ This repository is actively maintained - Contributions are welcome!
 | -l         | --links     | Comma separated links                       |
 | -d         | --directory | Location to save videos                     |
 
-### Using an an MCP Server:
+```bash
+media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
+```
+
+### MCP CLI
+
+| Short Flag | Long Flag                          | Description                                                                 |
+|------------|------------------------------------|-----------------------------------------------------------------------------|
+| -h         | --help                             | Display help information                                                    |
+| -t         | --transport                        | Transport method: 'stdio', 'http', or 'sse' [legacy] (default: stdio)       |
+| -s         | --host                             | Host address for HTTP transport (default: 0.0.0.0)                          |
+| -p         | --port                             | Port number for HTTP transport (default: 8000)                              |
+|            | --auth-type                        | Authentication type: 'none', 'static', 'jwt', 'oauth-proxy', 'oidc-proxy', 'remote-oauth' (default: none) |
+|            | --token-jwks-uri                   | JWKS URI for JWT verification                                              |
+|            | --token-issuer                     | Issuer for JWT verification                                                |
+|            | --token-audience                   | Audience for JWT verification                                              |
+|            | --oauth-upstream-auth-endpoint     | Upstream authorization endpoint for OAuth Proxy                             |
+|            | --oauth-upstream-token-endpoint    | Upstream token endpoint for OAuth Proxy                                    |
+|            | --oauth-upstream-client-id         | Upstream client ID for OAuth Proxy                                         |
+|            | --oauth-upstream-client-secret     | Upstream client secret for OAuth Proxy                                     |
+|            | --oauth-base-url                   | Base URL for OAuth Proxy                                                   |
+|            | --oidc-config-url                  | OIDC configuration URL                                                     |
+|            | --oidc-client-id                   | OIDC client ID                                                             |
+|            | --oidc-client-secret               | OIDC client secret                                                         |
+|            | --oidc-base-url                    | Base URL for OIDC Proxy                                                    |
+|            | --remote-auth-servers              | Comma-separated list of authorization servers for Remote OAuth             |
+|            | --remote-base-url                  | Base URL for Remote OAuth                                                  |
+|            | --allowed-client-redirect-uris     | Comma-separated list of allowed client redirect URIs                       |
+|            | --eunomia-type                     | Eunomia authorization type: 'none', 'embedded', 'remote' (default: none)   |
+|            | --eunomia-policy-file              | Policy file for embedded Eunomia (default: mcp_policies.json)              |
+|            | --eunomia-remote-url               | URL for remote Eunomia server                                              |
+
+### Using as an MCP Server
+
+The MCP Server can be run in two modes: `stdio` (for local testing) or `http` (for networked access). To start the server, use the following commands:
+
+#### Run in stdio mode (default):
+```bash
+media-downloader-mcp
+```
+
+#### Run in HTTP mode:
+```bash
+media-downloader-mcp --transport http --host 0.0.0.0 --port 8012
+```
+
 
 AI Prompt:
 ```text
@@ -61,17 +106,6 @@ AI Response:
 Sure thing, the video has been downloaded to:
 
 "C:\Users\User\Downloads\YouTube Video - Episode 1.mp4"
-```
-
-</details>
-
-<details>
-  <summary><b>Example:</b></summary>
-
-### Use in CLI
-
-```bash
-media-downloader --file "C:\Users\videos.txt" --directory "C:\Users\Downloads" --channel "WhiteHouse" --links "URL1,URL2,URL3"
 ```
 
 ### Use in Python
@@ -107,29 +141,109 @@ video_downloader_instance.open_file("FILE")
 video_downloader_instance.get_channel_videos("YT-Channel Name")
 ```
 
-### Use with AI
+### Deploy MCP Server as a Service
 
-Deploy MCP Server as a Service
+The MCP server can be deployed using Docker, with configurable authentication, middleware, and Eunomia authorization.
+
+#### Using Docker Run
+
 ```bash
 docker pull knucklessg1/media-downloader:latest
+
+docker run -d \
+  --name media-downloader-mcp \
+  -p 8004:8004 \
+  -e HOST=0.0.0.0 \
+  -e PORT=8004 \
+  -e TRANSPORT=http \
+  -e AUTH_TYPE=none \
+  -e EUNOMIA_TYPE=none \
+  -e DOWNLOAD_DIRECTORY=/downloads \
+  -e AUDIO_ONLY=false \
+  -v "/home/genius/Downloads:/downloads" \
+  knucklessg1/media-downloader:latest
 ```
 
-Modify the `compose.yml`
+For advanced authentication (e.g., JWT, OAuth Proxy, OIDC Proxy, Remote OAuth) or Eunomia, add the relevant environment variables:
 
-```compose
+```bash
+docker run -d \
+  --name media-downloader-mcp \
+  -p 8004:8004 \
+  -e HOST=0.0.0.0 \
+  -e PORT=8004 \
+  -e TRANSPORT=http \
+  -e AUTH_TYPE=oidc-proxy \
+  -e OIDC_CONFIG_URL=https://provider.com/.well-known/openid-configuration \
+  -e OIDC_CLIENT_ID=your-client-id \
+  -e OIDC_CLIENT_SECRET=your-client-secret \
+  -e OIDC_BASE_URL=https://your-server.com \
+  -e ALLOWED_CLIENT_REDIRECT_URIS=http://localhost:*,https://*.example.com/* \
+  -e EUNOMIA_TYPE=embedded \
+  -e EUNOMIA_POLICY_FILE=/app/mcp_policies.json \
+  -e DOWNLOAD_DIRECTORY=/downloads \
+  -e AUDIO_ONLY=false \
+  -v "/home/genius/Downloads:/downloads" \
+  knucklessg1/media-downloader:latest
+```
+
+#### Using Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
 services:
   media-downloader-mcp:
     image: knucklessg1/media-downloader:latest
-    volumes:
-      - downloads:/root/Downloads
     environment:
       - HOST=0.0.0.0
-      - PORT=8000
+      - PORT=8004
+      - TRANSPORT=http
+      - AUTH_TYPE=none
+      - EUNOMIA_TYPE=none
+      - DOWNLOAD_DIRECTORY=/downloads
+      - AUDIO_ONLY=false
+    volumes:
+      - "/home/genius/Downloads:/downloads"
     ports:
-      - 8000:8000
+      - 8004:8004
 ```
 
-Configure `mcp.json`
+For advanced setups with authentication and Eunomia:
+
+```yaml
+services:
+  media-downloader-mcp:
+    image: knucklessg1/media-downloader:latest
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8004
+      - TRANSPORT=http
+      - AUTH_TYPE=oidc-proxy
+      - OIDC_CONFIG_URL=https://provider.com/.well-known/openid-configuration
+      - OIDC_CLIENT_ID=your-client-id
+      - OIDC_CLIENT_SECRET=your-client-secret
+      - OIDC_BASE_URL=https://your-server.com
+      - ALLOWED_CLIENT_REDIRECT_URIS=http://localhost:*,https://*.example.com/*
+      - EUNOMIA_TYPE=embedded
+      - EUNOMIA_POLICY_FILE=/app/mcp_policies.json
+      - DOWNLOAD_DIRECTORY=/downloads
+      - AUDIO_ONLY=false
+    ports:
+      - 8004:8004
+    volumes:
+      - ./mcp_policies.json:/app/mcp_policies.json
+      - "/home/genius/Downloads:/downloads"
+```
+
+Run the service:
+
+```bash
+docker-compose up -d
+```
+
+#### Configure `mcp.json` for AI Integration
+
 
 ```json
 {
@@ -152,23 +266,6 @@ Configure `mcp.json`
 }
 
 ```
-Run as a docker container:
-
-```yaml
-services:
-  media-downloader-mcp:
-    image: docker.io/knucklessg1/media-downloader:latest
-    ports:
-      - "8000:8000"
-    volumes:
-      - "/home/genius/Downloads:/downloads"
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8000
-      - TRANSPORT=http
-      - DOWNLOAD_DIRECTORY=/downloads
-      - AUDIO_ONLY=false
-```
 </details>
 
 <details>
@@ -177,23 +274,13 @@ services:
 Install Python Package
 
 ```bash
-python -m pip install media-downloader
+python -m pip install --upgrade media-downloader
 ```
-</details>
 
-## Geniusbot Application
-
-Use with a GUI through Geniusbot
-
-Visit our [GitHub](https://github.com/Knuckles-Team/geniusbot) for more information
-
-<details>
-  <summary><b>Installation Instructions with Geniusbot:</b></summary>
-
-Install Python Package
+or
 
 ```bash
-python -m pip install geniusbot
+uv pip install --upgrade media-downloader
 ```
 
 </details>
