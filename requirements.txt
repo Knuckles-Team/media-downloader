@@ -1,2 +1,2 @@
 yt-dlp>=2025.9.26
-fastmcp>=2.11.3
+fastmcp>=2.12.4
