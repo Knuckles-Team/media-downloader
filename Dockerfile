@@ -48,7 +48,7 @@ ENV EUNOMIA_REMOTE_URL=${EUNOMIA_REMOTE_URL}
 ENV PATH="/usr/local/bin:${PATH}"
 
 RUN pip install uv \
-    && uv pip install --system --upgrade media-downloader>=2.1.9
+    && uv pip install --system --upgrade media-downloader>=2.1.10
 
 ENTRYPOINT exec media-downloader-mcp \
     --transport "${TRANSPORT}" \
