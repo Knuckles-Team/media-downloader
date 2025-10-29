@@ -46,10 +46,10 @@ ENV EUNOMIA_TYPE=${EUNOMIA_TYPE}
 ENV EUNOMIA_POLICY_FILE=${EUNOMIA_POLICY_FILE}
 ENV EUNOMIA_REMOTE_URL=${EUNOMIA_REMOTE_URL}
 ENV PATH="/usr/local/bin:${PATH}"
-ENV UV_HTTP_TIMEOUT=600
+ENV UV_HTTP_TIMEOUT=3600
 
 RUN pip install uv \
-    && uv pip install --system --upgrade media-downloader>=2.1.11
+    && uv pip install --system --upgrade media-downloader>=2.1.12
 
 ENTRYPOINT exec media-downloader-mcp \
     --transport "${TRANSPORT}" \

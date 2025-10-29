@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.1.11*
+*Version: 2.1.12*
 
 Download videos and audio from the internet!
 
