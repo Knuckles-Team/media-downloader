@@ -59,7 +59,7 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 RUN pip install uv \
-    && uv pip install --system --upgrade "media-downloader[all]>=2.1.12"
+    && uv pip install --system --upgrade "media-downloader[all]>=2.1.13"
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["media-downloader-mcp"]

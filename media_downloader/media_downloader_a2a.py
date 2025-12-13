@@ -21,6 +21,7 @@ DEFAULT_ALLOWED_TOOLS: List[str] = [
 ]
 
 AGENT_NAME = "MediaDownloaderAgent"
+AGENT_DESCRIPTION = "A specialist agent for downloading media content from the web."
 INSTRUCTIONS = (
     "You are a friendly media retrieval expert specialized in downloading media files.\n\n"
     "Your primary tool is 'download_media', which allows you to download videos or audio "
@@ -45,7 +46,7 @@ def create_agent(
     allowed_tools: List[str] = DEFAULT_ALLOWED_TOOLS,
 ) -> Agent:
     """
-    Factory function to create the MediaDownloaderAgent with configuration.
+    Factory function to create the AGENT_NAME with configuration.
     """
     # Define the model based on provider
     model = None
@@ -116,17 +117,10 @@ skills = [
     )
 ]
 
-app = agent.to_a2a(
-    name=AGENT_NAME,
-    description="A specialist agent for downloading media content from the web.",
-    version="1.0.0",
-    skills=skills
-)
-
 
 def agent_server():
     parser = argparse.ArgumentParser(
-        description="Run the MediaDownloaderAgent A2A Server"
+        description=f"Run the {AGENT_NAME} A2A Server"
     )
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind the server to")
     parser.add_argument(
@@ -157,7 +151,6 @@ def agent_server():
 
     args = parser.parse_args()
 
-    # Use defaults if not provided and provider is openai (to maintain original behavior for Ollama)
     base_url = args.base_url
     api_key = args.api_key
 
@@ -168,10 +161,9 @@ def agent_server():
             api_key = DEFAULT_OPENAI_API_KEY
 
     print(
-        f"Starting MediaDownloaderAgent with provider={args.provider}, model={args.model_id}, mcp={args.mcp_url}"
+        f"Starting {AGENT_NAME} with provider={args.provider}, model={args.model_id}, mcp={args.mcp_url}"
     )
 
-    # If running directly, we can just run the app created by the factory
     cli_agent = create_agent(
         provider=args.provider,
         model_id=args.model_id,
@@ -182,8 +174,8 @@ def agent_server():
     )
     cli_app = cli_agent.to_a2a(
         name=AGENT_NAME,
-        description="A specialist agent for downloading media content from the web.",
-        version="1.0.0",
+        description=AGENT_DESCRIPTION,
+        version="2.1.13",
         skills=skills
     )
 
@@ -191,7 +183,6 @@ def agent_server():
         cli_app,
         host=args.host,
         port=args.port,
-        # reload=args.reload # Reload requires string import path
     )
 
 
