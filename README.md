@@ -1,4 +1,4 @@
-# Media Downloader
+# Media Downloader - A2A & MCP Server
 
 ![PyPI - Version](https://img.shields.io/pypi/v/media-downloader)
 ![PyPI - Downloads](https://img.shields.io/pypi/dd/media-downloader)
@@ -24,7 +24,9 @@
 
 Download videos and audio from the internet!
 
-MCP Server Support!
+This package comes ready with an MCP Server and an A2A Server so you can plug this Agent into any of your existing agentic framework!
+
+You can also plug in the MCP Server directly to your own agent if you prefer!
 
 This repository is actively maintained - Contributions are welcome!
 

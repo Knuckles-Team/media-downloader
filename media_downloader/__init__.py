@@ -8,6 +8,7 @@ import inspect
 MODULES = [
     "media_downloader.media_downloader",
     "media_downloader.media_downloader_mcp",
+    "media_downloader.media_downloader_a2a",
 ]
 
 # Initialize __all__ to expose all public classes and functions
