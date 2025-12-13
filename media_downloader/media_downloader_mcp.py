@@ -23,7 +23,7 @@ from fastmcp.utilities.logging import get_logger
 from media_downloader.media_downloader import MediaDownloader
 
 local = local()
-logger = get_logger(name="ServiceNow.TokenMiddleware")
+logger = get_logger(name="MediaDownloader.TokenMiddleware")
 logger.setLevel(logging.DEBUG)
 
 
@@ -238,7 +238,7 @@ def register_prompts(mcp: FastMCP):
 
 
 def media_downloader_mcp():
-    parser = argparse.ArgumentParser(description="Run media downloader MCP server.")
+    parser = argparse.ArgumentParser(description="Media Downloader MCP Server")
     parser.add_argument(
         "-t",
         "--transport",
@@ -425,9 +425,7 @@ def media_downloader_mcp():
     )
 
     args = parser.parse_args()
-    mcp = FastMCP(name="MediaDownloaderServer")
-    register_tools(mcp)
-    register_prompts(mcp)
+
     if args.port < 0 or args.port > 65535:
         print(f"Error: Port {args.port} is out of valid range (0-65535).")
         sys.exit(1)
@@ -730,7 +728,7 @@ def media_downloader_mcp():
             logger.error("Failed to load Eunomia middleware", extra={"error": str(e)})
             sys.exit(1)
 
-    mcp = FastMCP("ServiceNow", auth=auth)
+    mcp = FastMCP("MediaDownloader", auth=auth)
     register_tools(mcp)
     register_prompts(mcp)
 
