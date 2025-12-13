@@ -26,6 +26,7 @@ local = local()
 logger = get_logger(name="ServiceNow.TokenMiddleware")
 logger.setLevel(logging.DEBUG)
 
+
 def to_boolean(string: Union[str, bool] = None) -> bool:
     if isinstance(string, bool):
         return string
@@ -40,6 +41,8 @@ def to_boolean(string: Union[str, bool] = None) -> bool:
         return False
     else:
         raise ValueError(f"Cannot convert '{string}' to boolean")
+
+
 config = {
     "enable_delegation": to_boolean(os.environ.get("ENABLE_DELEGATION", "False")),
     "audience": os.environ.get("SERVICENOW_AUDIENCE", None),
@@ -98,6 +101,7 @@ class JWTClaimsLoggingMiddleware(Middleware):
                     "scopes": context.auth.claims.get("scope"),
                 },
             )
+
 
 def register_tools(mcp: FastMCP):
     @mcp.tool(
@@ -215,6 +219,7 @@ def register_tools(mcp: FastMCP):
                 "error": str(e),
             }
 
+
 def register_prompts(mcp: FastMCP):
     # Prompts
     @mcp.prompt
@@ -222,17 +227,15 @@ def register_prompts(mcp: FastMCP):
         """
         Generates a prompt for creating a ServiceNow incident.
         """
-        return (
-            f"Download the following video: {video_url}."
-        )
+        return f"Download the following video: {video_url}."
+
     @mcp.prompt
     def download_audio(audio_url) -> str:
         """
         Generates a prompt for creating a ServiceNow incident.
         """
-        return (
-            f"Download the following media as audio only: {audio_url}."
-        )
+        return f"Download the following media as audio only: {audio_url}."
+
 
 def media_downloader_mcp():
     parser = argparse.ArgumentParser(description="Run media downloader MCP server.")
@@ -436,7 +439,7 @@ def media_downloader_mcp():
     config["oidc_config_url"] = args.oidc_config_url or config["oidc_config_url"]
     config["oidc_client_id"] = args.oidc_client_id or config["oidc_client_id"]
     config["oidc_client_secret"] = (
-            args.oidc_client_secret or config["oidc_client_secret"]
+        args.oidc_client_secret or config["oidc_client_secret"]
     )
 
     # Configure delegation if enabled
@@ -448,11 +451,11 @@ def media_downloader_mcp():
             logger.error("audience is required for delegation")
             sys.exit(1)
         if not all(
-                [
-                    config["oidc_config_url"],
-                    config["oidc_client_id"],
-                    config["oidc_client_secret"],
-                ]
+            [
+                config["oidc_config_url"],
+                config["oidc_client_id"],
+                config["oidc_client_secret"],
+            ]
         ):
             logger.error(
                 "Delegation requires complete OIDC configuration (oidc-config-url, oidc-client-id, oidc-client-secret)"
@@ -590,14 +593,14 @@ def media_downloader_mcp():
             sys.exit(1)
     elif args.auth_type == "oauth-proxy":
         if not (
-                args.oauth_upstream_auth_endpoint
-                and args.oauth_upstream_token_endpoint
-                and args.oauth_upstream_client_id
-                and args.oauth_upstream_client_secret
-                and args.oauth_base_url
-                and args.token_jwks_uri
-                and args.token_issuer
-                and args.token_audience
+            args.oauth_upstream_auth_endpoint
+            and args.oauth_upstream_token_endpoint
+            and args.oauth_upstream_client_id
+            and args.oauth_upstream_client_secret
+            and args.oauth_base_url
+            and args.token_jwks_uri
+            and args.token_issuer
+            and args.token_audience
         ):
             print(
                 "oauth-proxy requires oauth-upstream-auth-endpoint, oauth-upstream-token-endpoint, "
@@ -635,10 +638,10 @@ def media_downloader_mcp():
         )
     elif args.auth_type == "oidc-proxy":
         if not (
-                args.oidc_config_url
-                and args.oidc_client_id
-                and args.oidc_client_secret
-                and args.oidc_base_url
+            args.oidc_config_url
+            and args.oidc_client_id
+            and args.oidc_client_secret
+            and args.oidc_base_url
         ):
             logger.error(
                 "oidc-proxy requires oidc-config-url, oidc-client-id, oidc-client-secret, oidc-base-url",
@@ -658,11 +661,11 @@ def media_downloader_mcp():
         )
     elif args.auth_type == "remote-oauth":
         if not (
-                args.remote_auth_servers
-                and args.remote_base_url
-                and args.token_jwks_uri
-                and args.token_issuer
-                and args.token_audience
+            args.remote_auth_servers
+            and args.remote_base_url
+            and args.token_jwks_uri
+            and args.token_issuer
+            and args.token_audience
         ):
             logger.error(
                 "remote-oauth requires remote-auth-servers, remote-base-url, token-jwks-uri, token-issuer, token-audience",
