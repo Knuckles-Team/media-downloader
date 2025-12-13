@@ -107,21 +107,19 @@ agent = create_agent()
 # Define skills for the Agent Card
 skills = [
     Skill(
-        id='download_media',
-        name='Download Media',
-        description='Download videos or audio from various platforms (YouTube, Twitter, etc.) to the local filesystem.',
-        tags=['media', 'video', 'audio', 'download'],
-        examples=['Download this youtube video: https://youtu.be/example'],
-        input_modes=['text'],
-        output_modes=['text']
+        id="download_media",
+        name="Download Media",
+        description="Download videos or audio from various platforms (YouTube, Twitter, etc.) to the local filesystem.",
+        tags=["media", "video", "audio", "download"],
+        examples=["Download this youtube video: https://youtu.be/example"],
+        input_modes=["text"],
+        output_modes=["text"],
     )
 ]
 
 
 def agent_server():
-    parser = argparse.ArgumentParser(
-        description=f"Run the {AGENT_NAME} A2A Server"
-    )
+    parser = argparse.ArgumentParser(description=f"Run the {AGENT_NAME} A2A Server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind the server to")
     parser.add_argument(
         "--port", type=int, default=8000, help="Port to bind the server to"
@@ -173,10 +171,7 @@ def agent_server():
         allowed_tools=args.allowed_tools,
     )
     cli_app = cli_agent.to_a2a(
-        name=AGENT_NAME,
-        description=AGENT_DESCRIPTION,
-        version="2.1.13",
-        skills=skills
+        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.13", skills=skills
     )
 
     uvicorn.run(
