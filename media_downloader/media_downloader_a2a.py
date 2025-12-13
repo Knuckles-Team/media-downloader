@@ -3,9 +3,9 @@ import argparse
 import uvicorn
 from typing import List, Optional
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.models.gemini import GeminiModel
+from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.huggingface import HuggingFaceModel
 from pydantic_ai.toolsets.fastmcp import FastMCPToolset
 from fasta2a import Skill
@@ -61,7 +61,7 @@ def create_agent(
             os.environ["OPENAI_BASE_URL"] = target_base_url
         if target_api_key:
             os.environ["OPENAI_API_KEY"] = target_api_key
-        model = OpenAIModel(model_id, provider="openai")
+        model = OpenAIChatModel(model_id, provider="openai")
 
     elif provider == "anthropic":
         if api_key:
@@ -73,7 +73,7 @@ def create_agent(
             # google-genai usually looks for GOOGLE_API_KEY or GEMINI_API_KEY
             os.environ["GEMINI_API_KEY"] = api_key
             os.environ["GOOGLE_API_KEY"] = api_key
-        model = GeminiModel(model_id)
+        model = GoogleModel(model_id)
 
     elif provider == "huggingface":
         if api_key:
@@ -171,7 +171,7 @@ def agent_server():
         allowed_tools=args.allowed_tools,
     )
     cli_app = cli_agent.to_a2a(
-        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.13", skills=skills
+        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.14", skills=skills
     )
 
     uvicorn.run(
