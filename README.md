@@ -167,6 +167,16 @@ This package includes an Agent utilizing `pydantic-ai` that can be deployed as a
 media-downloader-a2a --provider openai --model-id qwen2.5:7b --mcp-url http://localhost:8004/mcp
 ```
 
+### Deploy A2A Server as a Service
+
+```bash
+docker run -e CMD=media-downloader-a2a \
+           -e PROVIDER=openai \
+           -e MODEL_ID=qwen2.5:7b \
+           -p 8000:8000 \
+           my-media-downloader-image
+```
+
 ### Deploy MCP Server as a Service
 
 The MCP server can be deployed using Docker, with configurable authentication, middleware, and Eunomia authorization.
