@@ -143,6 +143,30 @@ video_downloader_instance.open_file("FILE")
 video_downloader_instance.get_channel_videos("YT-Channel Name")
 ```
 
+### Agent-to-Agent (A2A) Server
+
+This package includes an Agent utilizing `pydantic-ai` that can be deployed as an A2A server. This agent is capable of using the `media-downloader` MCP server to fulfill media retrieval requests.
+
+#### A2A CLI
+
+| Long Flag        | Description                                      | Default                     |
+|------------------|--------------------------------------------------|-----------------------------|
+| --host           | Host to bind the server to                       | 0.0.0.0                     |
+| --port           | Port to bind the server to                       | 8000                        |
+| --reload         | Enable auto-reload                               | False                       |
+| --provider       | LLM Provider (openai, anthropic, google, etc)    | openai                      |
+| --model-id       | LLM Model ID                                     | qwen3:4b                    |
+| --base-url       | LLM Base URL (for OpenAI compatible providers)   | http://ollama.arpa/v1       |
+| --api-key        | LLM API Key                                      | ollama                      |
+| --mcp-url        | MCP Server URL to connect to                     | http://media-downloader-mcp.arpa/mcp |
+| --allowed-tools  | List of allowed MCP tools                        | download_media              |
+
+#### Run A2A Server
+
+```bash
+media-downloader-a2a --provider openai --model-id qwen2.5:7b --mcp-url http://localhost:8004/mcp
+```
+
 ### Deploy MCP Server as a Service
 
 The MCP server can be deployed using Docker, with configurable authentication, middleware, and Eunomia authorization.

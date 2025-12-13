@@ -11,30 +11,6 @@ import yt_dlp
 from multiprocessing import Pool
 
 
-# Configure logging
-def setup_logging(is_mcp_server=False, log_file="media_downloader.log"):
-    logger = logging.getLogger("MediaDownloader")
-    logger.setLevel(logging.DEBUG)
-
-    # Clear any existing handlers to avoid duplicate logs
-    logger.handlers.clear()
-
-    if is_mcp_server:
-        # Log to a file when running as MCP server
-        handler = logging.FileHandler(log_file)
-    else:
-        # Log to console (stdout) when running standalone
-        handler = logging.StreamHandler(sys.stdout)
-
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 class YtDlpLogger:
     def __init__(self, logger):
         self.logger = logger
@@ -137,7 +113,7 @@ class MediaDownloader:
                 x = 0
                 for vid in vids:
                     if limit < 0 or x < limit:
-                        self.append_link(vid)
+                        self.links.append(vid)
                     x += 1
                 return
             else:
@@ -162,7 +138,7 @@ class MediaDownloader:
                     x = 0
                     for vid in vids:
                         if limit < 0 or x < limit:
-                            self.append_link(vid)
+                            self.links.append(vid)
                         x += 1
                     return
             attempts += 1
@@ -224,7 +200,19 @@ def media_downloader():
 
     args = parser.parse_args()
 
-    logger = setup_logging(is_mcp_server=False)
+    logger = logging.getLogger("MediaDownloader")
+    logger.setLevel(logging.DEBUG)
+
+    # Clear any existing handlers to avoid duplicate logs
+    logger.handlers.clear()
+    handler = logging.StreamHandler(sys.stdout)
+
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     video_downloader_instance = MediaDownloader()
 
     if args.audio:

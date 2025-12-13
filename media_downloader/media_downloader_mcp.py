@@ -4,23 +4,27 @@ import argparse
 import os
 import sys
 import logging
-from typing import Optional, Dict, Union, Any
+from threading import local
+from typing import Optional, Dict, Union, Any, List
+
+import requests
+from eunomia_mcp.middleware import EunomiaMcpMiddleware
 from pydantic import Field
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth.oidc_proxy import OIDCProxy
 from fastmcp.server.auth import OAuthProxy, RemoteAuthProvider
 from fastmcp.server.auth.providers.jwt import JWTVerifier, StaticTokenVerifier
+from fastmcp.server.middleware import MiddlewareContext, Middleware
 from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.server.middleware.timing import TimingMiddleware
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
-from media_downloader.media_downloader import MediaDownloader, setup_logging
+from fastmcp.utilities.logging import get_logger
+from media_downloader.media_downloader import MediaDownloader
 
-# Initialize logging for MCP server (logs to file)
-setup_logging(is_mcp_server=True, log_file="media_downloader_mcp.log")
-
-mcp = FastMCP(name="MediaDownloaderServer")
-
+local = local()
+logger = get_logger(name="ServiceNow.TokenMiddleware")
+logger.setLevel(logging.DEBUG)
 
 def to_boolean(string: Union[str, bool] = None) -> bool:
     if isinstance(string, bool):
@@ -36,123 +40,199 @@ def to_boolean(string: Union[str, bool] = None) -> bool:
         return False
     else:
         raise ValueError(f"Cannot convert '{string}' to boolean")
+config = {
+    "enable_delegation": to_boolean(os.environ.get("ENABLE_DELEGATION", "False")),
+    "audience": os.environ.get("SERVICENOW_AUDIENCE", None),
+    "delegated_scopes": os.environ.get("DELEGATED_SCOPES", "api"),
+    "token_endpoint": None,  # Will be fetched dynamically from OIDC config
+    "oidc_client_id": os.environ.get("OIDC_CLIENT_ID", None),
+    "oidc_client_secret": os.environ.get("OIDC_CLIENT_SECRET", None),
+    "oidc_config_url": os.environ.get("OIDC_CONFIG_URL", None),
+    "jwt_jwks_uri": os.getenv("FASTMCP_SERVER_AUTH_JWT_JWKS_URI", None),
+    "jwt_issuer": os.getenv("FASTMCP_SERVER_AUTH_JWT_ISSUER", None),
+    "jwt_audience": os.getenv("FASTMCP_SERVER_AUTH_JWT_AUDIENCE", None),
+    "jwt_algorithm": os.getenv("FASTMCP_SERVER_AUTH_JWT_ALGORITHM", None),
+    "jwt_secret": os.getenv("FASTMCP_SERVER_AUTH_JWT_PUBLIC_KEY", None),
+    "jwt_required_scopes": os.getenv("FASTMCP_SERVER_AUTH_JWT_REQUIRED_SCOPES", None),
+}
 
 
-@mcp.tool(
-    annotations={
-        "title": "Download Media",
-        "readOnlyHint": False,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": False,
-    },
-    tags={"collection_management"},
-)
-async def download_media(
-    video_url: str = Field(description="Video URL to Download", default=None),
-    download_directory: Optional[str] = Field(
-        description="The directory where the media will be saved. If None, uses default directory.",
-        default=os.environ.get("DOWNLOAD_DIRECTORY", None),
-    ),
-    audio_only: Optional[bool] = Field(
-        description="Downloads only the audio",
-        default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
-    ),
-    ctx: Context = Field(
-        description="MCP context for progress reporting.", default=None
-    ),
-) -> Dict[str, Any]:
-    """
-    Downloads media from a given URL to the specified directory. Download as a video or audio file.
-    Returns a Dictionary response with status, download directory, audio only, and other details.
-    """
-    logger = logging.getLogger("MediaDownloader")
-    logger.debug(
-        f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
-    )
+class UserTokenMiddleware(Middleware):
+    async def on_request(self, context: MiddlewareContext, call_next):
+        logger.debug(f"Delegation enabled: {config['enable_delegation']}")
+        if config["enable_delegation"]:
+            headers = getattr(context.message, "headers", {})
+            auth = headers.get("Authorization")
+            if auth and auth.startswith("Bearer "):
+                token = auth.split(" ")[1]
+                local.user_token = token
+                local.user_claims = None  # Will be populated by JWTVerifier
 
-    try:
-        if not video_url:
-            return {
-                "status": 400,
-                "message": "Invalid input: video_url must not be empty",
-                "data": {
-                    "video_url": video_url,
-                    "download_directory": download_directory,
-                    "audio_only": audio_only,
+                # Extract claims if JWTVerifier already validated
+                if hasattr(context, "auth") and hasattr(context.auth, "claims"):
+                    local.user_claims = context.auth.claims
+                    logger.info(
+                        "Stored JWT claims for delegation",
+                        extra={"subject": context.auth.claims.get("sub")},
+                    )
+                else:
+                    logger.debug("JWT claims not yet available (will be after auth)")
+
+                logger.info("Extracted Bearer token for delegation")
+            else:
+                logger.error("Missing or invalid Authorization header")
+                raise ValueError("Missing or invalid Authorization header")
+        return await call_next(context)
+
+
+class JWTClaimsLoggingMiddleware(Middleware):
+    async def on_response(self, context: MiddlewareContext, call_next):
+        response = await call_next(context)
+        logger.info(f"JWT Response: {response}")
+        if hasattr(context, "auth") and hasattr(context.auth, "claims"):
+            logger.info(
+                "JWT Authentication Success",
+                extra={
+                    "subject": context.auth.claims.get("sub"),
+                    "client_id": context.auth.claims.get("client_id"),
+                    "scopes": context.auth.claims.get("scope"),
                 },
-                "error": "video_url must not be empty",
-            }
+            )
 
-        if download_directory:
-            download_directory = os.path.expanduser(download_directory)
-        else:
-            download_directory = f'{os.path.expanduser("~")}/Downloads'
-        os.makedirs(download_directory, exist_ok=True)
-
-        downloader = MediaDownloader(
-            download_directory=download_directory, audio=audio_only
+def register_tools(mcp: FastMCP):
+    @mcp.tool(
+        annotations={
+            "title": "Download Media",
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+        tags={"collection_management"},
+    )
+    async def download_media(
+        video_url: str = Field(description="Video URL to Download", default=None),
+        download_directory: Optional[str] = Field(
+            description="The directory where the media will be saved. If None, uses default directory.",
+            default=os.environ.get("DOWNLOAD_DIRECTORY", None),
+        ),
+        audio_only: Optional[bool] = Field(
+            description="Downloads only the audio",
+            default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
+        ),
+        ctx: Context = Field(
+            description="MCP context for progress reporting.", default=None
+        ),
+    ) -> Dict[str, Any]:
+        """
+        Downloads media from a given URL to the specified directory. Download as a video or audio file.
+        Returns a Dictionary response with status, download directory, audio only, and other details.
+        """
+        logger = logging.getLogger("MediaDownloader")
+        logger.debug(
+            f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
         )
 
-        # Set progress callback for yt_dlp
-        async def progress_callback(progress, total=None):
+        try:
+            if not video_url:
+                return {
+                    "status": 400,
+                    "message": "Invalid input: video_url must not be empty",
+                    "data": {
+                        "video_url": video_url,
+                        "download_directory": download_directory,
+                        "audio_only": audio_only,
+                    },
+                    "error": "video_url must not be empty",
+                }
+
+            if download_directory:
+                download_directory = os.path.expanduser(download_directory)
+            else:
+                download_directory = f'{os.path.expanduser("~")}/Downloads'
+            os.makedirs(download_directory, exist_ok=True)
+
+            downloader = MediaDownloader(
+                download_directory=download_directory, audio=audio_only
+            )
+
+            # Set progress callback for yt_dlp
+            async def progress_callback(progress, total=None):
+                if ctx:
+                    await ctx.report_progress(progress=progress, total=total)
+                    logger.debug(f"Reported progress: {progress}/{total}")
+
+            downloader.set_progress_callback(progress_callback)
+
+            # Report initial progress
             if ctx:
-                await ctx.report_progress(progress=progress, total=total)
-                logger.debug(f"Reported progress: {progress}/{total}")
+                await ctx.report_progress(progress=0, total=100)
+                logger.debug("Reported initial progress: 0/100")
 
-        downloader.set_progress_callback(progress_callback)
+            # Perform the download
+            file_path = downloader.download_video(link=video_url)
 
-        # Report initial progress
-        if ctx:
-            await ctx.report_progress(progress=0, total=100)
-            logger.debug("Reported initial progress: 0/100")
+            if not file_path or not os.path.exists(file_path):
+                return {
+                    "status": 500,
+                    "message": "Download failed: file not found",
+                    "data": {
+                        "video_url": video_url,
+                        "download_directory": download_directory,
+                        "audio_only": audio_only,
+                    },
+                    "error": "Download failed or file not found",
+                }
 
-        # Perform the download
-        file_path = downloader.download_video(link=video_url)
+            # Report completion
+            if ctx:
+                await ctx.report_progress(progress=100, total=100)
+                logger.debug("Reported final progress: 100/100")
 
-        if not file_path or not os.path.exists(file_path):
+            logger.debug(f"Download completed, file path: {file_path}")
+            return {
+                "status": 200,
+                "message": "Media downloaded successfully",
+                "data": {
+                    "file_path": file_path,
+                    "download_directory": download_directory,
+                    "audio_only": audio_only,
+                    "video_url": video_url,
+                },
+            }
+        except Exception as e:
+            logger.error(
+                f"Failed to download media: {str(e)}\nParams: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
+            )
             return {
                 "status": 500,
-                "message": "Download failed: file not found",
+                "message": "Failed to download media",
                 "data": {
                     "video_url": video_url,
                     "download_directory": download_directory,
                     "audio_only": audio_only,
                 },
-                "error": "Download failed or file not found",
+                "error": str(e),
             }
 
-        # Report completion
-        if ctx:
-            await ctx.report_progress(progress=100, total=100)
-            logger.debug("Reported final progress: 100/100")
-
-        logger.debug(f"Download completed, file path: {file_path}")
-        return {
-            "status": 200,
-            "message": "Media downloaded successfully",
-            "data": {
-                "file_path": file_path,
-                "download_directory": download_directory,
-                "audio_only": audio_only,
-                "video_url": video_url,
-            },
-        }
-    except Exception as e:
-        logger.error(
-            f"Failed to download media: {str(e)}\nParams: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
+def register_prompts(mcp: FastMCP):
+    # Prompts
+    @mcp.prompt
+    def download_video(video_url) -> str:
+        """
+        Generates a prompt for creating a ServiceNow incident.
+        """
+        return (
+            f"Download the following video: {video_url}."
         )
-        return {
-            "status": 500,
-            "message": "Failed to download media",
-            "data": {
-                "video_url": video_url,
-                "download_directory": download_directory,
-                "audio_only": audio_only,
-            },
-            "error": str(e),
-        }
-
+    @mcp.prompt
+    def download_audio(audio_url) -> str:
+        """
+        Generates a prompt for creating a ServiceNow incident.
+        """
+        return (
+            f"Download the following media as audio only: {audio_url}."
+        )
 
 def media_downloader_mcp():
     parser = argparse.ArgumentParser(description="Run media downloader MCP server.")
@@ -191,6 +271,37 @@ def media_downloader_mcp():
     )
     parser.add_argument(
         "--token-audience", default=None, help="Audience for JWT verification"
+    )
+    parser.add_argument(
+        "--token-algorithm",
+        default=os.getenv("FASTMCP_SERVER_AUTH_JWT_ALGORITHM"),
+        choices=[
+            "HS256",
+            "HS384",
+            "HS512",
+            "RS256",
+            "RS384",
+            "RS512",
+            "ES256",
+            "ES384",
+            "ES512",
+        ],
+        help="JWT signing algorithm (required for HMAC or static key). Auto-detected for JWKS.",
+    )
+    parser.add_argument(
+        "--token-secret",
+        default=os.getenv("FASTMCP_SERVER_AUTH_JWT_PUBLIC_KEY"),
+        help="Shared secret for HMAC (HS*) or PEM public key for static asymmetric verification.",
+    )
+    parser.add_argument(
+        "--token-public-key",
+        default=os.getenv("FASTMCP_SERVER_AUTH_JWT_PUBLIC_KEY"),
+        help="Path to PEM public key file or inline PEM string (for static asymmetric keys).",
+    )
+    parser.add_argument(
+        "--required-scopes",
+        default=os.getenv("FASTMCP_SERVER_AUTH_JWT_REQUIRED_SCOPES"),
+        help="Comma-separated list of required scopes (e.g., servicenow.read,servicenow.write).",
     )
     # OAuth Proxy params
     parser.add_argument(
@@ -253,12 +364,125 @@ def media_downloader_mcp():
     parser.add_argument(
         "--eunomia-remote-url", default=None, help="URL for remote Eunomia server"
     )
+    # Delegation params
+    parser.add_argument(
+        "--enable-delegation",
+        action="store_true",
+        default=to_boolean(os.environ.get("ENABLE_DELEGATION", "False")),
+        help="Enable OIDC token delegation to ServiceNow",
+    )
+    parser.add_argument(
+        "--audience",
+        default=os.environ.get("SERVICENOW_AUDIENCE", None),
+        help="Audience for the delegated ServiceNow token",
+    )
+    parser.add_argument(
+        "--delegated-scopes",
+        default=os.environ.get("DELEGATED_SCOPES", "api"),
+        help="Scopes for the delegated ServiceNow token (space-separated)",
+    )
+    parser.add_argument(
+        "--openapi-file",
+        default=None,
+        help="Path to the OpenAPI JSON file to import additional tools from",
+    )
+    parser.add_argument(
+        "--openapi-base-url",
+        default=None,
+        help="Base URL for the OpenAPI client (overrides ServiceNow instance URL)",
+    )
+    parser.add_argument(
+        "--openapi-use-token",
+        action="store_true",
+        help="Use the incoming Bearer token (from MCP request) to authenticate OpenAPI import",
+    )
+
+    parser.add_argument(
+        "--openapi-username",
+        default=os.getenv("OPENAPI_USERNAME"),
+        help="Username for basic auth during OpenAPI import",
+    )
+
+    parser.add_argument(
+        "--openapi-password",
+        default=os.getenv("OPENAPI_PASSWORD"),
+        help="Password for basic auth during OpenAPI import",
+    )
+
+    parser.add_argument(
+        "--openapi-client-id",
+        default=os.getenv("OPENAPI_CLIENT_ID"),
+        help="OAuth client ID for OpenAPI import",
+    )
+
+    parser.add_argument(
+        "--openapi-client-secret",
+        default=os.getenv("OPENAPI_CLIENT_SECRET"),
+        help="OAuth client secret for OpenAPI import",
+    )
 
     args = parser.parse_args()
-
+    mcp = FastMCP(name="MediaDownloaderServer")
+    register_tools(mcp)
+    register_prompts(mcp)
     if args.port < 0 or args.port > 65535:
         print(f"Error: Port {args.port} is out of valid range (0-65535).")
         sys.exit(1)
+
+    # Update config with CLI arguments
+    config["enable_delegation"] = args.enable_delegation
+    config["audience"] = args.audience or config["audience"]
+    config["delegated_scopes"] = args.delegated_scopes or config["delegated_scopes"]
+    config["oidc_config_url"] = args.oidc_config_url or config["oidc_config_url"]
+    config["oidc_client_id"] = args.oidc_client_id or config["oidc_client_id"]
+    config["oidc_client_secret"] = (
+            args.oidc_client_secret or config["oidc_client_secret"]
+    )
+
+    # Configure delegation if enabled
+    if config["enable_delegation"]:
+        if args.auth_type != "oidc-proxy":
+            logger.error("Token delegation requires auth-type=oidc-proxy")
+            sys.exit(1)
+        if not config["audience"]:
+            logger.error("audience is required for delegation")
+            sys.exit(1)
+        if not all(
+                [
+                    config["oidc_config_url"],
+                    config["oidc_client_id"],
+                    config["oidc_client_secret"],
+                ]
+        ):
+            logger.error(
+                "Delegation requires complete OIDC configuration (oidc-config-url, oidc-client-id, oidc-client-secret)"
+            )
+            sys.exit(1)
+
+        # Fetch OIDC configuration to get token_endpoint
+        try:
+            logger.info(
+                "Fetching OIDC configuration",
+                extra={"oidc_config_url": config["oidc_config_url"]},
+            )
+            oidc_config_resp = requests.get(config["oidc_config_url"])
+            oidc_config_resp.raise_for_status()
+            oidc_config = oidc_config_resp.json()
+            config["token_endpoint"] = oidc_config.get("token_endpoint")
+            if not config["token_endpoint"]:
+                logger.error("No token_endpoint found in OIDC configuration")
+                raise ValueError("No token_endpoint found in OIDC configuration")
+            logger.info(
+                "OIDC configuration fetched successfully",
+                extra={"token_endpoint": config["token_endpoint"]},
+            )
+        except Exception as e:
+            print(f"Failed to fetch OIDC configuration: {e}")
+            logger.error(
+                "Failed to fetch OIDC configuration",
+                extra={"error_type": type(e).__name__, "error_message": str(e)},
+            )
+            sys.exit(1)
 
     # Set auth based on type
     auth = None
@@ -271,7 +495,6 @@ def media_downloader_mcp():
     if args.auth_type == "none":
         auth = None
     elif args.auth_type == "static":
-        # Internal static tokens (hardcoded example)
         auth = StaticTokenVerifier(
             tokens={
                 "test-token": {"client_id": "test-user", "scopes": ["read", "write"]},
@@ -279,29 +502,121 @@ def media_downloader_mcp():
             }
         )
     elif args.auth_type == "jwt":
-        if not (args.token_jwks_uri and args.token_issuer and args.token_audience):
-            print(
-                "Error: jwt requires --token-jwks-uri, --token-issuer, --token-audience"
+        # Fallback to env vars if not provided via CLI
+        jwks_uri = args.token_jwks_uri or os.getenv("FASTMCP_SERVER_AUTH_JWT_JWKS_URI")
+        issuer = args.token_issuer or os.getenv("FASTMCP_SERVER_AUTH_JWT_ISSUER")
+        audience = args.token_audience or os.getenv("FASTMCP_SERVER_AUTH_JWT_AUDIENCE")
+        algorithm = args.token_algorithm
+        secret_or_key = args.token_secret or args.token_public_key
+        public_key_pem = None
+
+        if not (jwks_uri or secret_or_key):
+            logger.error(
+                "JWT auth requires either --token-jwks-uri or --token-secret/--token-public-key"
             )
             sys.exit(1)
-        auth = JWTVerifier(
-            jwks_uri=args.token_jwks_uri,
-            issuer=args.token_issuer,
-            audience=args.token_audience,
-        )
+        if not (issuer and audience):
+            logger.error("JWT requires --token-issuer and --token-audience")
+            sys.exit(1)
+
+        # Load static public key from file if path is given
+        if args.token_public_key and os.path.isfile(args.token_public_key):
+            try:
+                with open(args.token_public_key, "r") as f:
+                    public_key_pem = f.read()
+                logger.info(f"Loaded static public key from {args.token_public_key}")
+            except Exception as e:
+                print(f"Failed to read public key file: {e}")
+                logger.error(f"Failed to read public key file: {e}")
+                sys.exit(1)
+        elif args.token_public_key:
+            public_key_pem = args.token_public_key  # Inline PEM
+
+        # Validation: Conflicting options
+        if jwks_uri and (algorithm or secret_or_key):
+            logger.warning(
+                "JWKS mode ignores --token-algorithm and --token-secret/--token-public-key"
+            )
+
+        # HMAC mode
+        if algorithm and algorithm.startswith("HS"):
+            if not secret_or_key:
+                logger.error(f"HMAC algorithm {algorithm} requires --token-secret")
+                sys.exit(1)
+            if jwks_uri:
+                logger.error("Cannot use --token-jwks-uri with HMAC")
+                sys.exit(1)
+            public_key = secret_or_key
+        else:
+            public_key = public_key_pem
+
+        # Required scopes
+        required_scopes = None
+        if args.required_scopes:
+            required_scopes = [
+                s.strip() for s in args.required_scopes.split(",") if s.strip()
+            ]
+
+        try:
+            auth = JWTVerifier(
+                jwks_uri=jwks_uri,
+                public_key=public_key,
+                issuer=issuer,
+                audience=audience,
+                algorithm=(
+                    algorithm if algorithm and algorithm.startswith("HS") else None
+                ),
+                required_scopes=required_scopes,
+            )
+            logger.info(
+                "JWTVerifier configured",
+                extra={
+                    "mode": (
+                        "JWKS"
+                        if jwks_uri
+                        else (
+                            "HMAC"
+                            if algorithm and algorithm.startswith("HS")
+                            else "Static Key"
+                        )
+                    ),
+                    "algorithm": algorithm,
+                    "required_scopes": required_scopes,
+                },
+            )
+        except Exception as e:
+            print(f"Failed to initialize JWTVerifier: {e}")
+            logger.error(f"Failed to initialize JWTVerifier: {e}")
+            sys.exit(1)
     elif args.auth_type == "oauth-proxy":
         if not (
-            args.oauth_upstream_auth_endpoint
-            and args.oauth_upstream_token_endpoint
-            and args.oauth_upstream_client_id
-            and args.oauth_upstream_client_secret
-            and args.oauth_base_url
-            and args.token_jwks_uri
-            and args.token_issuer
-            and args.token_audience
+                args.oauth_upstream_auth_endpoint
+                and args.oauth_upstream_token_endpoint
+                and args.oauth_upstream_client_id
+                and args.oauth_upstream_client_secret
+                and args.oauth_base_url
+                and args.token_jwks_uri
+                and args.token_issuer
+                and args.token_audience
         ):
             print(
-                "Error: oauth-proxy requires --oauth-upstream-auth-endpoint, --oauth-upstream-token-endpoint, --oauth-upstream-client-id, --oauth-upstream-client-secret, --oauth-base-url, --token-jwks-uri, --token-issuer, --token-audience"
+                "oauth-proxy requires oauth-upstream-auth-endpoint, oauth-upstream-token-endpoint, "
+                "oauth-upstream-client-id, oauth-upstream-client-secret, oauth-base-url, token-jwks-uri, "
+                "token-issuer, token-audience"
+            )
+            logger.error(
+                "oauth-proxy requires oauth-upstream-auth-endpoint, oauth-upstream-token-endpoint, "
+                "oauth-upstream-client-id, oauth-upstream-client-secret, oauth-base-url, token-jwks-uri, "
+                "token-issuer, token-audience",
+                extra={
+                    "auth_endpoint": args.oauth_upstream_auth_endpoint,
+                    "token_endpoint": args.oauth_upstream_token_endpoint,
+                    "client_id": args.oauth_upstream_client_id,
+                    "base_url": args.oauth_base_url,
+                    "jwks_uri": args.token_jwks_uri,
+                    "issuer": args.token_issuer,
+                    "audience": args.token_audience,
+                },
             )
             sys.exit(1)
         token_verifier = JWTVerifier(
@@ -320,13 +635,18 @@ def media_downloader_mcp():
         )
     elif args.auth_type == "oidc-proxy":
         if not (
-            args.oidc_config_url
-            and args.oidc_client_id
-            and args.oidc_client_secret
-            and args.oidc_base_url
+                args.oidc_config_url
+                and args.oidc_client_id
+                and args.oidc_client_secret
+                and args.oidc_base_url
         ):
-            print(
-                "Error: oidc-proxy requires --oidc-config-url, --oidc-client-id, --oidc-client-secret, --oidc-base-url"
+            logger.error(
+                "oidc-proxy requires oidc-config-url, oidc-client-id, oidc-client-secret, oidc-base-url",
+                extra={
+                    "config_url": args.oidc_config_url,
+                    "client_id": args.oidc_client_id,
+                    "base_url": args.oidc_base_url,
+                },
             )
             sys.exit(1)
         auth = OIDCProxy(
@@ -338,14 +658,21 @@ def media_downloader_mcp():
         )
     elif args.auth_type == "remote-oauth":
         if not (
-            args.remote_auth_servers
-            and args.remote_base_url
-            and args.token_jwks_uri
-            and args.token_issuer
-            and args.token_audience
+                args.remote_auth_servers
+                and args.remote_base_url
+                and args.token_jwks_uri
+                and args.token_issuer
+                and args.token_audience
         ):
-            print(
-                "Error: remote-oauth requires --remote-auth-servers, --remote-base-url, --token-jwks-uri, --token-issuer, --token-audience"
+            logger.error(
+                "remote-oauth requires remote-auth-servers, remote-base-url, token-jwks-uri, token-issuer, token-audience",
+                extra={
+                    "auth_servers": args.remote_auth_servers,
+                    "base_url": args.remote_base_url,
+                    "jwks_uri": args.token_jwks_uri,
+                    "issuer": args.token_issuer,
+                    "audience": args.token_audience,
+                },
             )
             sys.exit(1)
         auth_servers = [url.strip() for url in args.remote_auth_servers.split(",")]
@@ -359,33 +686,59 @@ def media_downloader_mcp():
             authorization_servers=auth_servers,
             base_url=args.remote_base_url,
         )
-    mcp.auth = auth
-    if args.eunomia_type != "none":
-        from eunomia_mcp import create_eunomia_middleware
 
-        if args.eunomia_type == "embedded":
-            if not args.eunomia_policy_file:
-                print("Error: embedded Eunomia requires --eunomia-policy-file")
-                sys.exit(1)
-            middleware = create_eunomia_middleware(policy_file=args.eunomia_policy_file)
-            mcp.add_middleware(middleware)
-        elif args.eunomia_type == "remote":
-            if not args.eunomia_remote_url:
-                print("Error: remote Eunomia requires --eunomia-remote-url")
-                sys.exit(1)
-            middleware = create_eunomia_middleware(
-                use_remote_eunomia=args.eunomia_remote_url
+    # === 2. Build Middleware List ===
+    middlewares: List[
+        Union[
+            UserTokenMiddleware,
+            ErrorHandlingMiddleware,
+            RateLimitingMiddleware,
+            TimingMiddleware,
+            LoggingMiddleware,
+            JWTClaimsLoggingMiddleware,
+            EunomiaMcpMiddleware,
+        ]
+    ] = [
+        ErrorHandlingMiddleware(include_traceback=True, transform_errors=True),
+        RateLimitingMiddleware(max_requests_per_second=10.0, burst_capacity=20),
+        TimingMiddleware(),
+        LoggingMiddleware(),
+        JWTClaimsLoggingMiddleware(),
+    ]
+
+    if config["enable_delegation"] or args.auth_type == "jwt":
+        middlewares.insert(0, UserTokenMiddleware())  # Must be first
+
+    if args.eunomia_type in ["embedded", "remote"]:
+        try:
+            from eunomia_mcp import create_eunomia_middleware
+
+            policy_file = args.eunomia_policy_file or "mcp_policies.json"
+            eunomia_endpoint = (
+                args.eunomia_remote_url if args.eunomia_type == "remote" else None
             )
-            mcp.add_middleware(middleware)
+            eunomia_mw = create_eunomia_middleware(
+                policy_file=policy_file, eunomia_endpoint=eunomia_endpoint
+            )
+            middlewares.append(eunomia_mw)
+            logger.info(f"Eunomia middleware enabled ({args.eunomia_type})")
+        except Exception as e:
+            print(f"Failed to load Eunomia middleware: {e}")
+            logger.error("Failed to load Eunomia middleware", extra={"error": str(e)})
+            sys.exit(1)
 
-    mcp.add_middleware(
-        ErrorHandlingMiddleware(include_traceback=True, transform_errors=True)
-    )
-    mcp.add_middleware(
-        RateLimitingMiddleware(max_requests_per_second=10.0, burst_capacity=20)
-    )
-    mcp.add_middleware(TimingMiddleware())
-    mcp.add_middleware(LoggingMiddleware())
+    mcp = FastMCP("ServiceNow", auth=auth)
+    register_tools(mcp)
+    register_prompts(mcp)
+
+    for mw in middlewares:
+        mcp.add_middleware(mw)
+
+    print("\nStarting ServiceNow MCP Server")
+    print(f"  Transport: {args.transport.upper()}")
+    print(f"  Auth: {args.auth_type}")
+    print(f"  Delegation: {'ON' if config['enable_delegation'] else 'OFF'}")
+    print(f"  Eunomia: {args.eunomia_type}")
 
     if args.transport == "stdio":
         mcp.run(transport="stdio")
@@ -394,8 +747,7 @@ def media_downloader_mcp():
     elif args.transport == "sse":
         mcp.run(transport="sse", host=args.host, port=args.port)
     else:
-        logger = logging.getLogger("MediaDownloader")
-        logger.error("Transport not supported")
+        logger.error("Invalid transport", extra={"transport": args.transport})
         sys.exit(1)
 
 
