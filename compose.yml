@@ -4,6 +4,10 @@ services:
     image: docker.io/knucklessg1/media-downloader:latest
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
+    command: |
+      media-downloader-mcp
+    depends_on:
+      - ollama
     logging:
       driver: json-file
       options:
@@ -25,7 +29,11 @@ services:
     image: docker.io/knucklessg1/media-downloader:latest
     container_name: media-downloader-a2a
     hostname: media-downloader-a2a
-    network_mode: host
+    command: |
+      media-downloader-a2a
+    depends_on:
+      - ollama
+      - media-downloader-mcp
     logging:
       driver: json-file
       options:
@@ -49,20 +57,38 @@ services:
     container_name: ollama
     restart: always
     volumes:
-      - ./ollama_data:/root/.ollama
-    entrypoint: [ "/bin/bash", "-c" ]
-    command: >
-      /bin/ollama serve &
-      pid=$!
-      sleep 5
-      echo "🔴 Retrieve model..."
-      echo "Pulling qwen3:4b-8b..."
-      ollama pull qwen3:4b
-      echo "🟢 Done"
-      wait $pid
+      - ./ollama:/root/.ollama
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        ollama serve &
+        pid=$$!
+        echo "Waiting for Ollama server to start..."
+        while ! ollama list > /dev/null 2>&1; do
+          sleep 1
+        done
+        echo "Ollama is ready!"
+        echo "Pulling qwen3:4b..."
+        ollama pull qwen3:4b
+        echo "🟢 Model pulled and server ready"
+        wait $$pid
     ports:
       - "11434:11434"
     environment:
+      - "OLLAMA_HOST=0.0.0.0"
       - "OLLAMA_KEEP_ALIVE=24h"
       - "NVIDIA_VISIBLE_DEVICES=all"
       - "NVIDIA_DRIVER_CAPABILITIES=all"
+
+  a2a-inspector:
+    build: https://github.com/a2aproject/a2a-inspector.git
+    container_name: a2a-inspector
+    ports:
+      - "8080:8080"
+
+  mcp-inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    container_name: mcp-inspector
+    ports:
+      - "6274:6274"
