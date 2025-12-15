@@ -1,0 +1,68 @@
+---
+services:
+  media-downloader-mcp:
+    image: docker.io/knucklessg1/media-downloader:latest
+    container_name: media-downloader-mcp
+    hostname: media-downloader-mcp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - TRANSPORT=http
+      - DOWNLOAD_DIRECTORY=/downloads
+      - AUDIO_ONLY=false
+    volumes:
+      - ./downloads:/downloads:rw
+    ports:
+      - "8000:8000"
+
+  media-downloader-a2a:
+    image: docker.io/knucklessg1/media-downloader:latest
+    container_name: media-downloader-a2a
+    hostname: media-downloader-a2a
+    network_mode: host
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+    environment:
+      - DEFAULT_HOST=0.0.0.0
+      - DEFAULT_PORT=9000
+      - MCP_URL=http://media-downloader-mcp:8000/mcp
+      - PROVIDER=openai
+      - DEFAULT_OPENAI_BASE_URL=http://ollama:11434/v1
+      - DEFAULT_OPENAI_API_KEY=ollama
+      - DEFAULT_MODEL_ID=qwen3:4b
+    ports:
+      - "9000:9000"
+
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    hostname: ollama
+    container_name: ollama
+    restart: always
+    volumes:
+      - ./ollama_data:/root/.ollama
+    entrypoint: [ "/bin/bash", "-c" ]
+    command: >
+      /bin/ollama serve &
+      pid=$!
+      sleep 5
+      echo "🔴 Retrieve model..."
+      echo "Pulling qwen3:4b-8b..."
+      ollama pull qwen3:4b
+      echo "🟢 Done"
+      wait $pid
+    ports:
+      - "11434:11434"
+    environment:
+      - "OLLAMA_KEEP_ALIVE=24h"
+      - "NVIDIA_VISIBLE_DEVICES=all"
+      - "NVIDIA_DRIVER_CAPABILITIES=all"
