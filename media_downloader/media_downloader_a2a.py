@@ -155,6 +155,12 @@ def agent_server():
 
     base_url = args.base_url
     api_key = args.api_key
+    host = args.host
+    port = args.port
+    model_id = args.model_id
+    mcp_url = args.mcp_url
+    provider = args.provider
+    allowed_tools = args.allowed_tools
 
     if args.provider == "openai":
         if base_url is None:
@@ -163,25 +169,25 @@ def agent_server():
             api_key = DEFAULT_OPENAI_API_KEY
 
     print(
-        f"Starting {AGENT_NAME} with provider={args.provider}, model={args.model_id}, mcp={args.mcp_url}"
+        f"Starting {AGENT_NAME} with provider={provider}, model={model_id}, mcp={mcp_url}, host={host}, port={port}"
     )
 
     cli_agent = create_agent(
-        provider=args.provider,
-        model_id=args.model_id,
+        provider=provider,
+        model_id=model_id,
         base_url=base_url,
         api_key=api_key,
-        mcp_url=args.mcp_url,
-        allowed_tools=args.allowed_tools,
+        mcp_url=mcp_url,
+        allowed_tools=allowed_tools,
     )
     cli_app = cli_agent.to_a2a(
-        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.18", skills=skills
+        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.19", skills=skills
     )
 
     uvicorn.run(
         cli_app,
-        host=args.host,
-        port=args.port,
+        host=host,
+        port=port,
     )
 
 
