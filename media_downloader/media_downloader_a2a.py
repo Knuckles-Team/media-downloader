@@ -11,11 +11,13 @@ from pydantic_ai.toolsets.fastmcp import FastMCPToolset
 from fasta2a import Skill
 
 # Default Configuration
-DEFAULT_PROVIDER = "openai"
-DEFAULT_MODEL_ID = "qwen3:4b"
+DEFAULT_HOST = os.getenv("HOST", "0.0.0.0")
+DEFAULT_PORT = os.getenv("PORT", "9000")
+DEFAULT_PROVIDER = os.getenv("PROVIDER", "openai")
+DEFAULT_MODEL_ID = os.getenv("MODEL_ID", "qwen3:4b")
 DEFAULT_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://ollama.arpa/v1")
 DEFAULT_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "ollama")
-DEFAULT_MCP_URL = "http://media-downloader-mcp.arpa/mcp"
+DEFAULT_MCP_URL = os.getenv("MCP_URL", "http://media-downloader-mcp.arpa/mcp")
 DEFAULT_ALLOWED_TOOLS: List[str] = [
     "download_media",
 ]
@@ -120,9 +122,11 @@ skills = [
 
 def agent_server():
     parser = argparse.ArgumentParser(description=f"Run the {AGENT_NAME} A2A Server")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to bind the server to")
     parser.add_argument(
-        "--port", type=int, default=8000, help="Port to bind the server to"
+        "--host", default=DEFAULT_HOST, help="Host to bind the server to"
+    )
+    parser.add_argument(
+        "--port", type=int, default=DEFAULT_PORT, help="Port to bind the server to"
     )
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
 
@@ -171,7 +175,7 @@ def agent_server():
         allowed_tools=args.allowed_tools,
     )
     cli_app = cli_agent.to_a2a(
-        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.17", skills=skills
+        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.18", skills=skills
     )
 
     uvicorn.run(
