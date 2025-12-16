@@ -55,11 +55,12 @@ ENV ALLOWED_TOOLS=""
 ENV PATH="/usr/local/bin:${PATH}"
 ENV UV_HTTP_TIMEOUT=3600
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-RUN pip install uv \
-    && uv pip install --system --upgrade "media-downloader[all]>=2.1.19"
+RUN apt update \
+    && apt upgrade -y \
+    && apt install curl unzip -y \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && pip install uv \
+    && uv pip install --system --upgrade "media-downloader[all]>=2.1.20"
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["media-downloader-mcp"]

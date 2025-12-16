@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.1.19*
+*Version: 2.1.20*
 
 Download videos and audio from the internet!
 
@@ -37,6 +37,9 @@ This repository is actively maintained - Contributions are welcome!
 - BitChute
 - Vimeo
 - And More!
+
+This requires a [javascript runtime](https://github.com/yt-dlp/yt-dlp/issues/15012#issue-3614398875).
+However, the container is fully baked and ready to go!
 
 <details>
   <summary><b>Usage:</b></summary>
