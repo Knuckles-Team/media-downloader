@@ -4,43 +4,29 @@ import argparse
 import os
 import sys
 import logging
-from threading import local
 from typing import Optional, Dict, Union, Any, List
 
 import requests
+import subprocess
 from eunomia_mcp.middleware import EunomiaMcpMiddleware
 from pydantic import Field
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth.oidc_proxy import OIDCProxy
 from fastmcp.server.auth import OAuthProxy, RemoteAuthProvider
 from fastmcp.server.auth.providers.jwt import JWTVerifier, StaticTokenVerifier
-from fastmcp.server.middleware import MiddlewareContext, Middleware
 from fastmcp.server.middleware.logging import LoggingMiddleware
 from fastmcp.server.middleware.timing import TimingMiddleware
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
 from fastmcp.utilities.logging import get_logger
 from media_downloader.media_downloader import MediaDownloader
+from media_downloader.utils import to_boolean, to_integer
+from media_downloader.middlewares import JWTClaimsLoggingMiddleware, UserTokenMiddleware
 
-local = local()
-logger = get_logger(name="MediaDownloader.TokenMiddleware")
-logger.setLevel(logging.DEBUG)
-
-
-def to_boolean(string: Union[str, bool] = None) -> bool:
-    if isinstance(string, bool):
-        return string
-    if not string:
-        return False
-    normalized = str(string).strip().lower()
-    true_values = {"t", "true", "y", "yes", "1"}
-    false_values = {"f", "false", "n", "no", "0"}
-    if normalized in true_values:
-        return True
-    elif normalized in false_values:
-        return False
-    else:
-        raise ValueError(f"Cannot convert '{string}' to boolean")
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = get_logger("MediaDownloaderMCPServer")
 
 
 config = {
@@ -59,51 +45,154 @@ config = {
     "jwt_required_scopes": os.getenv("FASTMCP_SERVER_AUTH_JWT_REQUIRED_SCOPES", None),
 }
 
-
-class UserTokenMiddleware(Middleware):
-    async def on_request(self, context: MiddlewareContext, call_next):
-        logger.debug(f"Delegation enabled: {config['enable_delegation']}")
-        if config["enable_delegation"]:
-            headers = getattr(context.message, "headers", {})
-            auth = headers.get("Authorization")
-            if auth and auth.startswith("Bearer "):
-                token = auth.split(" ")[1]
-                local.user_token = token
-                local.user_claims = None  # Will be populated by JWTVerifier
-
-                # Extract claims if JWTVerifier already validated
-                if hasattr(context, "auth") and hasattr(context.auth, "claims"):
-                    local.user_claims = context.auth.claims
-                    logger.info(
-                        "Stored JWT claims for delegation",
-                        extra={"subject": context.auth.claims.get("sub")},
-                    )
-                else:
-                    logger.debug("JWT claims not yet available (will be after auth)")
-
-                logger.info("Extracted Bearer token for delegation")
-            else:
-                logger.error("Missing or invalid Authorization header")
-                raise ValueError("Missing or invalid Authorization header")
-        return await call_next(context)
-
-
-class JWTClaimsLoggingMiddleware(Middleware):
-    async def on_response(self, context: MiddlewareContext, call_next):
-        response = await call_next(context)
-        logger.info(f"JWT Response: {response}")
-        if hasattr(context, "auth") and hasattr(context.auth, "claims"):
-            logger.info(
-                "JWT Authentication Success",
-                extra={
-                    "subject": context.auth.claims.get("sub"),
-                    "client_id": context.auth.claims.get("client_id"),
-                    "scopes": context.auth.claims.get("scope"),
-                },
-            )
+DEFAULT_TRANSPORT = os.environ.get("TRANSPORT", "stdio")
+DEFAULT_HOST = os.environ.get("HOST", "0.0.0.0")
+DEFAULT_PORT = to_integer(os.environ.get("PORT", "8000"))
 
 
 def register_tools(mcp: FastMCP):
+    @mcp.tool(
+        annotations={
+            "title": "Download Media",
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+        tags={"collection_management"},
+    )
+    async def run_command(
+        command: str = Field(description="The command to run"),
+        ctx: Context = Field(
+            description="MCP context for progress reporting.", default=None
+        ),
+    ) -> Dict[str, Any]:
+        """
+        Run a bash command on the local system.
+        """
+        logger.debug(f"Running command: {command}")
+        if ctx:
+            await ctx.report_progress(progress=0, total=100)
+        try:
+            result = subprocess.run(
+                command, shell=True, capture_output=True, text=True, check=False
+            )
+            output = result.stdout
+            if result.stderr:
+                output += f"\nSTDERR:\n{result.stderr}"
+            if ctx:
+                await ctx.report_progress(progress=100, total=100)
+            return {
+                "status": 200 if result.returncode == 0 else 500,
+                "output": output,
+                "return_code": result.returncode,
+            }
+        except Exception as e:
+            return {"status": 500, "error": str(e)}
+
+    @mcp.tool(
+        annotations={
+            "title": "Text Editor",
+            "readOnlyHint": False,
+            "destructiveHint": True,
+            "idempotentHint": False,
+            "openWorldHint": True,
+        },
+        tags={"text_editor", "files"},
+    )
+    async def text_editor(
+        command: str = Field(
+            description="The command to perform: view, create, str_replace, insert, undo_edit"
+        ),
+        path: str = Field(description="Path to the file"),
+        file_text: Optional[str] = Field(
+            description="Content to write or insert", default=None
+        ),
+        view_range: Optional[List[int]] = Field(
+            description="Line range to view [start, end]", default=None
+        ),
+        old_str: Optional[str] = Field(description="String to replace", default=None),
+        new_str: Optional[str] = Field(description="Replacement string", default=None),
+        insert_line: Optional[int] = Field(
+            description="Line number to insert at", default=None
+        ),
+        ctx: Context = Field(
+            description="MCP context for progress reporting.", default=None
+        ),
+    ) -> Dict[str, Any]:
+        """
+        View and edit files on the local filesystem.
+        """
+        logger.debug(f"Text editor command: {command} on {path}")
+        expanded_path = os.path.abspath(os.path.expanduser(path))
+
+        try:
+            if command == "view":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    lines = f.readlines()
+                content = "".join(lines)
+                if view_range and len(view_range) == 2:
+                    start, end = view_range
+                    # 1-based indexing for view_range typically? Let's assume 1-based to match editors
+                    start = max(1, start)
+                    end = min(len(lines), end)
+                    content = "".join(lines[start - 1 : end])
+                return {"status": 200, "content": content, "path": expanded_path}
+
+            elif command == "create":
+                if os.path.exists(expanded_path):
+                    return {"status": 400, "error": "File already exists"}
+                os.makedirs(os.path.dirname(expanded_path), exist_ok=True)
+                with open(expanded_path, "w") as f:
+                    f.write(file_text or "")
+                return {"status": 200, "message": "File created", "path": expanded_path}
+
+            elif command == "str_replace":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    content = f.read()
+                if old_str not in content:
+                    return {"status": 400, "error": "Target string not found"}
+                new_content = content.replace(
+                    old_str, new_str or "", 1
+                )  # Replace first occurrence only? Anthropic usually implies uniqueness or single block
+                with open(expanded_path, "w") as f:
+                    f.write(new_content)
+                return {"status": 200, "message": "File updated", "path": expanded_path}
+
+            elif command == "insert":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    lines = f.readlines()
+                if insert_line is None:
+                    return {"status": 400, "error": "insert_line required"}
+                # Insert AFTER the line? Or AT? Anthropic usually 0-indexed or 1-indexed? Assume 1-based
+                idx = max(0, insert_line)
+                # If idx is 0, insert at start?
+                # Let's append
+                new_lines = file_text.splitlines(keepends=True)
+                # handle missing newlines
+                if new_lines and not new_lines[-1].endswith("\n"):
+                    new_lines[-1] += "\n"
+
+                lines[idx:idx] = new_lines
+                with open(expanded_path, "w") as f:
+                    f.writelines(lines)
+                return {
+                    "status": 200,
+                    "message": "Content inserted",
+                    "path": expanded_path,
+                }
+
+            return {"status": 400, "error": f"Unknown command {command}"}
+
+        except Exception as e:
+            return {"status": 500, "error": str(e)}
+
     @mcp.tool(
         annotations={
             "title": "Download Media",
@@ -132,7 +221,6 @@ def register_tools(mcp: FastMCP):
         Downloads media from a given URL to the specified directory. Download as a video or audio file.
         Returns a Dictionary response with status, download directory, audio only, and other details.
         """
-        logger = logging.getLogger("MediaDownloader")
         logger.debug(
             f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
         )
@@ -242,21 +330,21 @@ def media_downloader_mcp():
     parser.add_argument(
         "-t",
         "--transport",
-        default="stdio",
-        choices=["stdio", "http", "sse"],
-        help="Transport method: 'stdio', 'http', or 'sse' [legacy] (default: stdio)",
+        default=DEFAULT_TRANSPORT,
+        choices=["stdio", "streamable-http", "sse"],
+        help="Transport method: 'stdio', 'streamable-http', or 'sse' [legacy] (default: stdio)",
     )
     parser.add_argument(
         "-s",
         "--host",
-        default="0.0.0.0",
+        default=DEFAULT_HOST,
         help="Host address for HTTP transport (default: 0.0.0.0)",
     )
     parser.add_argument(
         "-p",
         "--port",
         type=int,
-        default=8000,
+        default=DEFAULT_PORT,
         help="Port number for HTTP transport (default: 8000)",
     )
     parser.add_argument(
@@ -708,7 +796,7 @@ def media_downloader_mcp():
     ]
 
     if config["enable_delegation"] or args.auth_type == "jwt":
-        middlewares.insert(0, UserTokenMiddleware())  # Must be first
+        middlewares.insert(0, UserTokenMiddleware(config=config))  # Must be first
 
     if args.eunomia_type in ["embedded", "remote"]:
         try:

@@ -23,6 +23,8 @@
 
 *Version: 2.1.21*
 
+## Overview
+
 Download videos and audio from the internet!
 
 This package comes ready with an MCP Server and an A2A Server so you can plug this Agent into any of your existing agentic framework!
@@ -42,8 +44,7 @@ This repository is actively maintained - Contributions are welcome!
 This requires a [javascript runtime](https://github.com/yt-dlp/yt-dlp/issues/15012#issue-3614398875).
 However, the container is fully baked and ready to go!
 
-<details>
-  <summary><b>Usage:</b></summary>
+## Usage
 
 ### CLI
 | Short Flag | Long Flag   | Description                                 |
@@ -118,7 +119,7 @@ Sure thing, the video has been downloaded to:
 
 ```python
 # Import library
-from media_downloader import MediaDownloader
+from media_downloader.media_downloader import MediaDownloader
 
 # Set URL of video/audio here
 url = "https://YootToob.com/video"
@@ -306,12 +307,8 @@ docker-compose up -d
 }
 
 ```
-</details>
 
-<details>
-  <summary><b>Installation Instructions:</b></summary>
-
-Install Python Package
+## Install Python Package
 
 ```bash
 python -m pip install --upgrade media-downloader
@@ -323,14 +320,11 @@ or
 uv pip install --upgrade media-downloader
 ```
 
-</details>
 
-<details>
-  <summary><b>Repository Owners:</b></summary>
-
+## Repository Owners
 
 <img width="100%" height="180em" src="https://github-readme-stats.vercel.app/api?username=Knucklessg1&show_icons=true&hide_border=true&&count_private=true&include_all_commits=true" />
 
 ![GitHub followers](https://img.shields.io/github/followers/Knucklessg1)
 ![GitHub User's stars](https://img.shields.io/github/stars/Knucklessg1)
-</details>
+

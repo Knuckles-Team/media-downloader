@@ -2,12 +2,10 @@
 services:
   media-downloader-mcp:
     image: docker.io/knucklessg1/media-downloader:latest
+    # build: .
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
-    command: |
-      media-downloader-mcp
-    depends_on:
-      - ollama
+    command: ["media-downloader-mcp"]
     logging:
       driver: json-file
       options:
@@ -21,18 +19,17 @@ services:
       - DOWNLOAD_DIRECTORY=/downloads
       - AUDIO_ONLY=false
     volumes:
-      - ./downloads:/downloads:rw
+      - ./mcp/downloads:/downloads:rw
     ports:
       - "8000:8000"
 
   media-downloader-a2a:
     image: docker.io/knucklessg1/media-downloader:latest
+    # build: .
     container_name: media-downloader-a2a
     hostname: media-downloader-a2a
-    command: |
-      media-downloader-a2a
+    command: ["media-downloader-a2a"]
     depends_on:
-      - ollama
       - media-downloader-mcp
     logging:
       driver: json-file
@@ -46,52 +43,7 @@ services:
       - "MCP_URL=http://media-downloader-mcp:8000/mcp"
       - "PROVIDER=openai"
       - "OPENAI_BASE_URL=http://ollama:11434/v1"
-      - "OPENAI_API_KEY=ollama"
+      - "OPENAI_API_KEY=llama"
       - "MODEL_ID=qwen3:4b"
     ports:
       - "9000:9000"
-
-  ollama:
-    image: docker.io/ollama/ollama:latest
-    hostname: ollama
-    container_name: ollama
-    restart: always
-    volumes:
-      - ./ollama:/root/.ollama
-    entrypoint:
-      - /bin/bash
-      - -c
-      - |
-        ollama serve &
-        pid=$$!
-        echo "Waiting for Ollama server to start..."
-        while ! ollama list > /dev/null 2>&1; do
-          sleep 1
-        done
-        echo "Ollama is ready!"
-        echo "Pulling qwen3:4b..."
-        ollama pull qwen3:4b
-        echo "🟢 Model pulled and server ready"
-        wait $$pid
-    ports:
-      - "11434:11434"
-    environment:
-      - "OLLAMA_HOST=0.0.0.0"
-      - "OLLAMA_KEEP_ALIVE=24h"
-      - "NVIDIA_VISIBLE_DEVICES=all"
-      - "NVIDIA_DRIVER_CAPABILITIES=all"
-
-  a2a-inspector:
-    build: https://github.com/a2aproject/a2a-inspector.git
-    container_name: a2a-inspector
-    ports:
-      - "8080:8080"
-
-  mcp-inspector:
-    image: ghcr.io/modelcontextprotocol/inspector:latest
-    container_name: mcp-inspector
-    environment:
-      - "HOST=0.0.0.0"
-    ports:
-      - "6274:6274"
-      - "6277:6277"
