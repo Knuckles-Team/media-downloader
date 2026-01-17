@@ -1,42 +1,87 @@
 import os
 import argparse
 import uvicorn
-from typing import List, Optional
+import logging
+from typing import Optional
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.huggingface import HuggingFaceModel
 from pydantic_ai.toolsets.fastmcp import FastMCPToolset
+from fastmcp.utilities.logging import get_logger
 from fasta2a import Skill
+from typing import Any
+
+from fastmcp import Client
+from pydantic_ai.mcp import load_mcp_servers
+from pydantic_ai_skills import SkillsToolset
+
+from media_downloader.utils import (
+    to_boolean,
+    get_mcp_config_path,
+    get_skills_path,
+    load_skills_from_directory,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logging.getLogger("pydantic_ai").setLevel(logging.INFO)
+logging.getLogger("fastmcp").setLevel(logging.INFO)
+logging.getLogger("httpx").setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Default Configuration
 DEFAULT_HOST = os.getenv("HOST", "0.0.0.0")
-DEFAULT_PORT = os.getenv("PORT", "9000")
+DEFAULT_PORT = int(os.getenv("PORT", "9000"))
+DEFAULT_DEBUG = to_boolean(os.getenv("DEBUG", "False"))
 DEFAULT_PROVIDER = os.getenv("PROVIDER", "openai")
-DEFAULT_MODEL_ID = os.getenv("MODEL_ID", "qwen3:4b")
-DEFAULT_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://ollama.arpa/v1")
+DEFAULT_MODEL_ID = os.getenv("MODEL_ID", "qwen/qwen3-8b")
+DEFAULT_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:1234/v1")
 DEFAULT_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "ollama")
-DEFAULT_MCP_URL = os.getenv("MCP_URL", "http://media-downloader-mcp.arpa/mcp")
-DEFAULT_ALLOWED_TOOLS: List[str] = [
-    "download_media",
-]
+DEFAULT_MCP_URL = os.getenv("MCP_URL", None)
+DEFAULT_MCP_CONFIG = os.getenv("MCP_CONFIG", get_mcp_config_path())
+# Calculate default skills directory relative to this file
+DEFAULT_SKILLS_DIRECTORY = os.getenv(get_skills_path())
 
 AGENT_NAME = "MediaDownloaderAgent"
 AGENT_DESCRIPTION = "A specialist agent for downloading media content from the web."
-INSTRUCTIONS = (
-    "You are a friendly media retrieval expert specialized in downloading media files.\n\n"
-    "Your primary tool is 'download_media', which allows you to download videos or audio "
-    "from various platforms (e.g., YouTube). "
-    "By default, save downloaded files to the ~/Downloads directory "
-    "unless the user explicitly directs you to use a different directory.\n\n"
-    "Key capabilities:\n"
-    "- Download either full video or audio-only formats.\n"
-    "- Support batch downloading of multiple media files in a single request.\n\n"
-    "Always clearly state the full save path(s) of the downloaded file(s) in your final response.\n\n"
-    "Maintain a warm, friendly, and helpful tone in all interactions with the user.\n"
-    "Handle any errors gracefully: if a download fails, explain the issue politely and suggest alternatives if possible."
-)
+
+
+def create_model(
+    provider: str = DEFAULT_PROVIDER,
+    model_id: str = DEFAULT_MODEL_ID,
+    base_url: Optional[str] = DEFAULT_OPENAI_BASE_URL,
+    api_key: Optional[str] = DEFAULT_OPENAI_API_KEY,
+):
+    if provider == "openai":
+        target_base_url = base_url or DEFAULT_OPENAI_BASE_URL
+        target_api_key = api_key or DEFAULT_OPENAI_API_KEY
+        if target_base_url:
+            os.environ["OPENAI_BASE_URL"] = target_base_url
+        if target_api_key:
+            os.environ["OPENAI_API_KEY"] = target_api_key
+        return OpenAIChatModel(model_id, provider="openai")
+
+    elif provider == "anthropic":
+        if api_key:
+            os.environ["ANTHROPIC_API_KEY"] = api_key
+        return AnthropicModel(model_id)
+
+    elif provider == "google":
+        if api_key:
+            os.environ["GEMINI_API_KEY"] = api_key
+            os.environ["GOOGLE_API_KEY"] = api_key
+        return GoogleModel(model_id)
+
+    elif provider == "huggingface":
+        if api_key:
+            os.environ["HF_TOKEN"] = api_key
+        return HuggingFaceModel(model_id)
 
 
 def create_agent(
@@ -45,79 +90,117 @@ def create_agent(
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
     mcp_url: str = DEFAULT_MCP_URL,
-    allowed_tools: List[str] = DEFAULT_ALLOWED_TOOLS,
+    mcp_config: str = DEFAULT_MCP_CONFIG,
+    skills_directory: Optional[str] = DEFAULT_SKILLS_DIRECTORY,
 ) -> Agent:
-    """
-    Factory function to create the AGENT_NAME with configuration.
-    """
-    # Define the model based on provider
-    model = None
+    agent_toolsets = []
 
-    if provider == "openai":
-        # Configure environment for OpenAI compatible model (e.g. Ollama)
-        # Use defaults if not provided to ensure we point to the expected local server by default
-        target_base_url = base_url or DEFAULT_OPENAI_BASE_URL
-        target_api_key = api_key or DEFAULT_OPENAI_API_KEY
+    if mcp_config and os.path.exists(mcp_config):
+        mcp_toolset = load_mcp_servers(mcp_config)
+        agent_toolsets.extend(mcp_toolset)
+        logger.info(f"Connected to MCP Config JSON: {mcp_toolset}")
+    elif mcp_url:
+        fastmcp_toolset = FastMCPToolset(Client[Any](mcp_url, timeout=3600))
+        agent_toolsets.append(fastmcp_toolset)
+        logger.info(f"Connected to MCP Server: {mcp_url}")
 
-        if target_base_url:
-            os.environ["OPENAI_BASE_URL"] = target_base_url
-        if target_api_key:
-            os.environ["OPENAI_API_KEY"] = target_api_key
-        model = OpenAIChatModel(model_id, provider="openai")
+    if skills_directory and os.path.exists(skills_directory):
+        logger.debug(f"Loading skills {skills_directory}")
+        skills = SkillsToolset(directories=[str(skills_directory)])
+        agent_toolsets.append(skills)
+        logger.info(f"Loaded Skills at {skills_directory}")
 
-    elif provider == "anthropic":
-        if api_key:
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-        model = AnthropicModel(model_id)
+    # Create the Model
+    model = create_model(provider, model_id, base_url, api_key)
 
-    elif provider == "google":
-        if api_key:
-            # google-genai usually looks for GOOGLE_API_KEY or GEMINI_API_KEY
-            os.environ["GEMINI_API_KEY"] = api_key
-            os.environ["GOOGLE_API_KEY"] = api_key
-        model = GoogleModel(model_id)
+    logger.info("Initializing Agent...")
 
-    elif provider == "huggingface":
-        if api_key:
-            os.environ["HF_TOKEN"] = api_key
-        model = HuggingFaceModel(model_id)
-
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
-
-    # Define the toolset using FastMCPToolset with the streamable HTTP URL
-    # and filter for allowed tools only
-    toolset = FastMCPToolset(client=mcp_url)
-    filtered_toolset = toolset.filtered(
-        lambda ctx, tool_def: tool_def.name in allowed_tools
-    )
-
-    # Define the agent
-    agent_definition = Agent(
-        model,
-        system_prompt=INSTRUCTIONS,
+    return Agent(
+        model=model,
+        system_prompt=(
+            "You are a friendly media retrieval expert specialized in downloading media files.\n\n"
+            "Your primary tool is 'download_media', which allows you to download videos or audio "
+            "from various platforms (e.g., YouTube). "
+            "By default, save downloaded files to the ~/Downloads directory "
+            "unless the user explicitly directs you to use a different directory.\n\n"
+            "Key capabilities:\n"
+            "- Download either full video or audio-only formats.\n"
+            "- Support batch downloading of multiple media files in a single request.\n\n"
+            "Always clearly state the full save path(s) of the downloaded file(s) in your final response.\n\n"
+            "Maintain a warm, friendly, and helpful tone in all interactions with the user.\n"
+            "Handle any errors gracefully: if a download fails, explain the issue politely and suggest alternatives if possible."
+        ),
         name=AGENT_NAME,
-        toolsets=[filtered_toolset],
+        toolsets=agent_toolsets,
+        deps_type=Any,
     )
 
-    return agent_definition
 
-
-# Expose as A2A server (Default instance for ASGI runners)
-agent = create_agent()
-
-# Define skills for the Agent Card
-skills = [
-    Skill(
-        id="download_media",
-        name="Download Media",
-        description="Download videos or audio from various platforms (YouTube, Twitter, etc.) to the local filesystem.",
-        tags=["media", "video", "audio", "download"],
-        examples=["Download this youtube video: https://youtu.be/example"],
-        input_modes=["text"],
-        output_modes=["text"],
+def create_a2a_server(
+    provider: str = DEFAULT_PROVIDER,
+    model_id: str = DEFAULT_MODEL_ID,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    mcp_url: str = DEFAULT_MCP_URL,
+    mcp_config: str = DEFAULT_MCP_CONFIG,
+    skills_directory: Optional[str] = DEFAULT_SKILLS_DIRECTORY,
+    debug: Optional[bool] = DEFAULT_DEBUG,
+    host: Optional[str] = DEFAULT_HOST,
+    port: Optional[int] = DEFAULT_PORT,
+):
+    print(
+        f"Starting {AGENT_NAME} with provider={provider}, model={model_id}, mcp={mcp_url} | {mcp_config}"
     )
-]
+    agent = create_agent(
+        provider=provider,
+        model_id=model_id,
+        base_url=base_url,
+        api_key=api_key,
+        mcp_url=mcp_url,
+        mcp_config=mcp_config,
+        skills_directory=skills_directory,
+    )
+
+    # Define Skills for Agent Card
+    if skills_directory and os.path.exists(skills_directory):
+        skills = load_skills_from_directory(skills_directory)
+        logger.info(f"Loaded {len(skills)} skills from {skills_directory}")
+    else:
+        # Fallback if no skills directory
+        skills = [
+            Skill(
+                id="searxng_agent",
+                name="SearXNG Agent",
+                description="General access to SearXNG search tools",
+                tags=["searxng", "search"],
+                input_modes=["text"],
+                output_modes=["text"],
+            )
+        ]
+
+    # Create A2A App
+    app = agent.to_a2a(
+        name=AGENT_NAME,
+        description=AGENT_DESCRIPTION,
+        version="2.1.21",
+        skills=skills,
+        debug=debug,
+    )
+
+    logger.info(
+        "Starting A2A server with provider=%s, model=%s, mcp_url=%s, mcp_config=%s",
+        provider,
+        model_id,
+        mcp_url,
+        mcp_config,
+    )
+
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level="debug" if debug else "info",
+    )
 
 
 def agent_server():
@@ -128,6 +211,7 @@ def agent_server():
     parser.add_argument(
         "--port", type=int, default=DEFAULT_PORT, help="Port to bind the server to"
     )
+    parser.add_argument("--debug", type=bool, default=DEFAULT_DEBUG, help="Debug mode")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
 
     parser.add_argument(
@@ -139,55 +223,52 @@ def agent_server():
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID, help="LLM Model ID")
     parser.add_argument(
         "--base-url",
-        default=None,
+        default=DEFAULT_OPENAI_BASE_URL,
         help="LLM Base URL (for OpenAI compatible providers)",
     )
-    parser.add_argument("--api-key", default=None, help="LLM API Key")
+    parser.add_argument("--api-key", default=DEFAULT_OPENAI_API_KEY, help="LLM API Key")
     parser.add_argument("--mcp-url", default=DEFAULT_MCP_URL, help="MCP Server URL")
     parser.add_argument(
-        "--allowed-tools",
-        nargs="*",
-        default=DEFAULT_ALLOWED_TOOLS,
-        help="List of allowed MCP tools",
+        "--mcp-config", default=DEFAULT_MCP_CONFIG, help="MCP Server Config"
+    )
+    parser.add_argument(
+        "--skills-directory",
+        default=DEFAULT_SKILLS_DIRECTORY,
+        help="Directory containing agent skills",
     )
 
     args = parser.parse_args()
 
-    base_url = args.base_url
-    api_key = args.api_key
-    host = args.host
-    port = args.port
-    model_id = args.model_id
-    mcp_url = args.mcp_url
-    provider = args.provider
-    allowed_tools = args.allowed_tools
+    if args.debug:
+        # Force reconfiguration of logging
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
 
-    if args.provider == "openai":
-        if base_url is None:
-            base_url = DEFAULT_OPENAI_BASE_URL
-        if api_key is None:
-            api_key = DEFAULT_OPENAI_API_KEY
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler()],
+            force=True,
+        )
+        get_logger("pydantic_ai").setLevel(logging.DEBUG)
+        get_logger("fastmcp").setLevel(logging.DEBUG)
+        get_logger("httpcore").setLevel(logging.DEBUG)
+        get_logger("httpx").setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled")
 
-    print(
-        f"Starting {AGENT_NAME} with provider={provider}, model={model_id}, mcp={mcp_url}, host={host}, port={port}"
-    )
-
-    cli_agent = create_agent(
-        provider=provider,
-        model_id=model_id,
-        base_url=base_url,
-        api_key=api_key,
-        mcp_url=mcp_url,
-        allowed_tools=allowed_tools,
-    )
-    cli_app = cli_agent.to_a2a(
-        name=AGENT_NAME, description=AGENT_DESCRIPTION, version="2.1.20", skills=skills
-    )
-
-    uvicorn.run(
-        cli_app,
-        host=host,
-        port=port,
+    # Create the agent with CLI args
+    create_a2a_server(
+        provider=args.provider,
+        model_id=args.model_id,
+        base_url=args.base_url,
+        api_key=args.api_key,
+        mcp_url=args.mcp_url,
+        mcp_config=args.mcp_config,
+        skills_directory=args.skills_directory,
+        debug=args.debug,
+        host=args.host,
+        port=args.port,
     )
 
 

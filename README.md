@@ -1,6 +1,7 @@
 # Media Downloader - A2A & MCP Server
 
 ![PyPI - Version](https://img.shields.io/pypi/v/media-downloader)
+![MCP Server](https://badge.mcpx.dev?type=server 'MCP Server')
 ![PyPI - Downloads](https://img.shields.io/pypi/dd/media-downloader)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Knuckles-Team/media-downloader)
 ![GitHub forks](https://img.shields.io/github/forks/Knuckles-Team/media-downloader)
@@ -20,7 +21,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.1.20*
+*Version: 2.1.21*
 
 Download videos and audio from the internet!
 
