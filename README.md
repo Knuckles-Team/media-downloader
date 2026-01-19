@@ -1,4 +1,4 @@
-# Media Downloader - A2A & MCP Server
+# Media Downloader - A2A | AG-UI | MCP
 
 ![PyPI - Version](https://img.shields.io/pypi/v/media-downloader)
 ![MCP Server](https://badge.mcpx.dev?type=server 'MCP Server')
@@ -152,6 +152,11 @@ video_downloader_instance.get_channel_videos("YT-Channel Name")
 
 This package includes an Agent utilizing `pydantic-ai` that can be deployed as an A2A server. This agent is capable of using the `media-downloader` MCP server to fulfill media retrieval requests.
 
+#### Endpoints
+- **Web UI**: `http://localhost:8000/` (if enabled)
+- **A2A**: `http://localhost:8000/a2a` (Discovery: `/a2a/.well-known/agent.json`)
+- **AG-UI**: `http://localhost:8000/ag-ui` (POST)
+
 #### A2A CLI
 
 | Long Flag        | Description                                      | Default                     |
@@ -165,17 +170,18 @@ This package includes an Agent utilizing `pydantic-ai` that can be deployed as a
 | --api-key        | LLM API Key                                      | ollama                      |
 | --mcp-url        | MCP Server URL to connect to                     | http://media-downloader-mcp.arpa/mcp |
 | --allowed-tools  | List of allowed MCP tools                        | download_media              |
+| --web            | Enable Pydantic AI Web UI                        | False                       |
 
 #### Run A2A Server
 
 ```bash
-media-downloader-a2a --provider openai --model-id qwen2.5:7b --mcp-url http://localhost:8004/mcp
+media-downloader-agent --provider openai --model-id qwen2.5:7b --mcp-url http://localhost:8004/mcp
 ```
 
 ### Deploy A2A Server as a Service
 
 ```bash
-docker run -e CMD=media-downloader-a2a \
+docker run -e CMD=media-downloader-agent \
            -e PROVIDER=openai \
            -e MODEL_ID=qwen2.5:7b \
            -p 8000:8000 \
@@ -327,4 +333,3 @@ uv pip install --upgrade media-downloader
 
 ![GitHub followers](https://img.shields.io/github/followers/Knucklessg1)
 ![GitHub User's stars](https://img.shields.io/github/stars/Knucklessg1)
-

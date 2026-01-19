@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "vector-mcp": {
+    "media-downloader": {
       "url": "${MCP_URL:-http://localhost:8000/mcp}",
       "timeout": 300000
     }

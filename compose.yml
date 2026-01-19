@@ -6,6 +6,8 @@ services:
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
     command: ["media-downloader-mcp"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: json-file
       options:
@@ -23,12 +25,14 @@ services:
     ports:
       - "8000:8000"
 
-  media-downloader-a2a:
+  media-downloader-agent:
     image: docker.io/knucklessg1/media-downloader:latest
     # build: .
-    container_name: media-downloader-a2a
-    hostname: media-downloader-a2a
-    command: ["media-downloader-a2a"]
+    container_name: media-downloader-agent
+    hostname: media-downloader-agent
+    command: ["media-downloader-agent"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - media-downloader-mcp
     logging:
@@ -45,5 +49,7 @@ services:
       - "OPENAI_BASE_URL=http://ollama:11434/v1"
       - "OPENAI_API_KEY=llama"
       - "MODEL_ID=qwen3:4b"
+      - "DEBUG=False"
+      - "ENABLE_WEB_UI=True"
     ports:
       - "9000:9000"
