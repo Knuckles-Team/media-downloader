@@ -55,6 +55,6 @@ RUN apt update \
     && apt install ffmpeg curl make unzip -y \
     && curl -fsSL https://deno.land/install.sh | sh \
     && pip install uv \
-    && uv pip install --system --upgrade "media-downloader[all]>=2.1.22"
+    && uv pip install --system --upgrade "media-downloader[all]>=2.1.23"
 
 CMD ["media-downloader-mcp"]
