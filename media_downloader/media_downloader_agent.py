@@ -198,7 +198,7 @@ def create_agent_server(
     a2a_app = agent.to_a2a(
         name=AGENT_NAME,
         description=AGENT_DESCRIPTION,
-        version="2.1.23",
+        version="2.1.24",
         skills=skills,
         debug=debug,
     )
@@ -220,6 +220,10 @@ def create_agent_server(
         debug=debug,
         lifespan=lifespan,
     )
+
+    @app.get("/health")
+    async def health_check():
+        return {"status": "OK"}
 
     # Mount A2A as sub-app at /a2a
     app.mount("/a2a", a2a_app)
