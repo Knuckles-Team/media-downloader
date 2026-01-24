@@ -9,6 +9,8 @@ from typing import Optional, Dict, Union, Any, List
 import requests
 import subprocess
 from eunomia_mcp.middleware import EunomiaMcpMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 from pydantic import Field
 from fastmcp import FastMCP, Context
 from fastmcp.server.auth.oidc_proxy import OIDCProxy
@@ -51,6 +53,10 @@ DEFAULT_PORT = to_integer(os.environ.get("PORT", "8000"))
 
 
 def register_tools(mcp: FastMCP):
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(request: Request) -> JSONResponse:
+        return JSONResponse({"status": "OK"})
+
     @mcp.tool(
         annotations={
             "title": "Download Media",

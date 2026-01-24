@@ -5,7 +5,7 @@ services:
     # build: .
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
-    command: ["media-downloader-mcp"]
+    command: [ "media-downloader-mcp" ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -24,13 +24,19 @@ services:
       - ./mcp/downloads:/downloads:rw
     ports:
       - "8000:8000"
+    healthcheck:
+      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   media-downloader-agent:
     image: docker.io/knucklessg1/media-downloader:latest
     # build: .
     container_name: media-downloader-agent
     hostname: media-downloader-agent
-    command: ["media-downloader-agent"]
+    command: [ "media-downloader-agent" ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -53,3 +59,9 @@ services:
       - "ENABLE_WEB_UI=True"
     ports:
       - "9000:9000"
+    healthcheck:
+      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
