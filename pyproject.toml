@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "media-downloader"
-version = "2.1.25"
+version = "2.1.26"
 description = "Download audio/videos from the internet!\nHost an MCP Server for Agentic AI to download videos!"
 readme = "README.md"
 authors = [{ name = "Audel Rouhi", email = "knucklessg1@gmail.com" }]
