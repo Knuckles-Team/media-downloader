@@ -49,21 +49,11 @@ ENV UV_HTTP_TIMEOUT=3600
 ENV DENO_INSTALL="/root/.deno"
 ENV PATH="/usr/local/bin:$DENO_INSTALL/bin:${PATH}"
 
-#RUN apt update \
-#    && apt upgrade -y \
-#    && apt install ffmpeg curl make unzip -y \
-#    && curl -fsSL https://deno.land/install.sh | sh \
-#    && pip install uv \
-#    && uv pip install --system --upgrade "media-downloader[all]>=2.1.27"
-
-RUN apt update
-
-RUN apt install -y --no-install-recommends ffmpeg curl make unzip
-
-RUN curl -fsSL https://deno.land/install.sh | sh
-
-RUN pip install uv
-
-RUN uv pip install --system --upgrade "media-downloader[all]>=2.1.27"
+RUN apt update \
+    && apt upgrade -y \
+    && apt install ffmpeg curl make unzip -y \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && pip install uv \
+    && uv pip install --system --upgrade --prerelease=allow "media-downloader[all]>=2.1.28"
 
 CMD ["media-downloader-mcp"]
