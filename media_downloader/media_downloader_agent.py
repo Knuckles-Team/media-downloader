@@ -24,6 +24,7 @@ from media_downloader.utils import (
     get_mcp_config_path,
     get_skills_path,
     load_skills_from_directory,
+    create_model,
 )
 
 from fastapi import FastAPI, Request
@@ -198,7 +199,7 @@ def create_agent_server(
     a2a_app = agent.to_a2a(
         name=AGENT_NAME,
         description=AGENT_DESCRIPTION,
-        version="2.1.24",
+        version="2.1.25",
         skills=skills,
         debug=debug,
     )
