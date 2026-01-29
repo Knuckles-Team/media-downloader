@@ -25,6 +25,8 @@ from media_downloader.media_downloader import MediaDownloader
 from media_downloader.utils import to_boolean, to_integer
 from media_downloader.middlewares import JWTClaimsLoggingMiddleware, UserTokenMiddleware
 
+__version__ = "2.1.33"
+
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -829,6 +831,7 @@ def media_downloader_mcp():
     for mw in middlewares:
         mcp.add_middleware(mw)
 
+    print(f"Media Downloader MCP v{__version__}")
     print("\nStarting Media Downloader MCP Server")
     print(f"  Transport: {args.transport.upper()}")
     print(f"  Auth: {args.auth_type}")

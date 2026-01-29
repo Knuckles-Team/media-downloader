@@ -10,6 +10,8 @@ import requests
 import yt_dlp
 from multiprocessing import Pool
 
+__version__ = "2.1.33"
+
 
 class YtDlpLogger:
     def __init__(self, logger):
@@ -172,6 +174,7 @@ class MediaDownloader:
 
 
 def usage():
+    print(f"media_downloader v{__version__}")
     print(
         "Media-Downloader: A tool to download any video off the internet!\n"
         "\nUsage:\n"
