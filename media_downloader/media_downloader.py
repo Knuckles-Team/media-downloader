@@ -10,7 +10,7 @@ import requests
 import yt_dlp
 from multiprocessing import Pool
 
-__version__ = "2.1.37"
+__version__ = "2.1.38"
 
 
 class YtDlpLogger:
@@ -174,23 +174,25 @@ class MediaDownloader:
 
 
 def usage():
-    print(f"media_downloader v{__version__}")
     print(
-        "Media-Downloader: A tool to download any video off the internet!\n"
-        "\nUsage:\n"
-        "-h | --help      [ See usage ]\n"
-        "-a | --audio     [ Download audio only ]\n"
-        "-c | --channel   [ YouTube Channel/User - Downloads all videos ]\n"
-        "-d | --directory [ Location where the images will be saved ]\n"
-        "-f | --file      [ Text file to read the URLs from ]\n"
-        "-l | --links     [ Comma separated URLs (No spaces) ]\n"
-        "\nExample:\n"
-        'media-downloader -f "file_of_urls.txt" -l "URL1,URL2,URL3" -c "WhiteHouse" -d "~/Downloads"\n'
+        f"Media Downloader ({__version__}): Download media from various sources.\n\n"
+        "Usage:\n"
+        "-a | --audio        [ Download audio only ]\n"
+        "-c | --channel      [ Download videos from a channel URL ]\n"
+        "-d | --directory    [ Specify download directory ]\n"
+        "-f | --file         [ Read URLs from a file ]\n"
+        "-l | --links        [ Comma-separated list of URLs to download ]\n"
+        "\n"
+        "Examples:\n"
+        "  [Simple]  media-downloader \n"
+        '  [Complex] media-downloader --audio --channel "value" --directory "value" --file "value" --links "value"\n'
     )
 
 
 def media_downloader():
-    parser = argparse.ArgumentParser(description="Download media from various sources.")
+    parser = argparse.ArgumentParser(
+        add_help=False, description="Download media from various sources."
+    )
     parser.add_argument(
         "-a", "--audio", action="store_true", help="Download audio only"
     )
@@ -201,7 +203,15 @@ def media_downloader():
         "-l", "--links", help="Comma-separated list of URLs to download"
     )
 
+    parser.add_argument("--help", action="store_true", help="Show usage")
+
     args = parser.parse_args()
+
+    if hasattr(args, "help") and args.help:
+
+        usage()
+
+        sys.exit(0)
 
     logger = logging.getLogger("MediaDownloader")
     logger.setLevel(logging.DEBUG)
