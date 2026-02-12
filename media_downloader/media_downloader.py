@@ -10,7 +10,7 @@ import requests
 import yt_dlp
 from multiprocessing import Pool
 
-__version__ = "2.2.4"
+__version__ = "2.2.5"
 
 
 class YtDlpLogger:
@@ -38,7 +38,7 @@ class MediaDownloader:
             self.download_directory = f'{os.path.expanduser("~")}/Downloads'
         self.audio = audio
         self.logger = logging.getLogger("MediaDownloader")
-        self.progress_callback = None  # Store callback for progress updates
+        self.progress_callback = None
 
     def set_progress_callback(self, callback):
         self.progress_callback = callback
@@ -69,7 +69,7 @@ class MediaDownloader:
             "outtmpl": outtmpl,
             "quiet": True,
             "no_warnings": True,
-            "progress_hooks": [self.progress_hook],  # Add progress hook
+            "progress_hooks": [self.progress_hook],
             "logger": YtDlpLogger(self.logger),
         }
         if self.audio:
@@ -152,7 +152,6 @@ class MediaDownloader:
                 progress = (d["downloaded_bytes"] / d["total_bytes"]) * 100
                 self.progress_callback(progress=progress, total=100)
             elif d.get("downloaded_bytes"):
-                # Indeterminate progress if total_bytes is unavailable
                 self.progress_callback(progress=d["downloaded_bytes"])
         elif d["status"] == "finished":
             if self.progress_callback:
@@ -216,7 +215,6 @@ def media_downloader():
     logger = logging.getLogger("MediaDownloader")
     logger.setLevel(logging.DEBUG)
 
-    # Clear any existing handlers to avoid duplicate logs
     logger.handlers.clear()
     handler = logging.StreamHandler(sys.stdout)
 

@@ -25,7 +25,7 @@ from media_downloader.media_downloader import MediaDownloader
 from media_downloader.utils import to_boolean, to_integer
 from media_downloader.middlewares import JWTClaimsLoggingMiddleware, UserTokenMiddleware
 
-__version__ = "2.2.4"
+__version__ = "2.2.5"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -37,7 +37,7 @@ config = {
     "enable_delegation": to_boolean(os.environ.get("ENABLE_DELEGATION", "False")),
     "audience": os.environ.get("AUDIENCE", None),
     "delegated_scopes": os.environ.get("DELEGATED_SCOPES", "api"),
-    "token_endpoint": None,  # Will be fetched dynamically from OIDC config
+    "token_endpoint": None,
     "oidc_client_id": os.environ.get("OIDC_CLIENT_ID", None),
     "oidc_client_secret": os.environ.get("OIDC_CLIENT_SECRET", None),
     "oidc_config_url": os.environ.get("OIDC_CONFIG_URL", None),
@@ -143,7 +143,6 @@ def register_tools(mcp: FastMCP):
                 content = "".join(lines)
                 if view_range and len(view_range) == 2:
                     start, end = view_range
-                    # 1-based indexing for view_range typically? Let's assume 1-based to match editors
                     start = max(1, start)
                     end = min(len(lines), end)
                     content = "".join(lines[start - 1 : end])
@@ -164,9 +163,7 @@ def register_tools(mcp: FastMCP):
                     content = f.read()
                 if old_str not in content:
                     return {"status": 400, "error": "Target string not found"}
-                new_content = content.replace(
-                    old_str, new_str or "", 1
-                )  # Replace first occurrence only? Anthropic usually implies uniqueness or single block
+                new_content = content.replace(old_str, new_str or "", 1)
                 with open(expanded_path, "w") as f:
                     f.write(new_content)
                 return {"status": 200, "message": "File updated", "path": expanded_path}
@@ -178,12 +175,8 @@ def register_tools(mcp: FastMCP):
                     lines = f.readlines()
                 if insert_line is None:
                     return {"status": 400, "error": "insert_line required"}
-                # Insert AFTER the line? Or AT? Anthropic usually 0-indexed or 1-indexed? Assume 1-based
                 idx = max(0, insert_line)
-                # If idx is 0, insert at start?
-                # Let's append
                 new_lines = file_text.splitlines(keepends=True)
-                # handle missing newlines
                 if new_lines and not new_lines[-1].endswith("\n"):
                     new_lines[-1] += "\n"
 
@@ -256,7 +249,6 @@ def register_tools(mcp: FastMCP):
                 download_directory=download_directory, audio=audio_only
             )
 
-            # Set progress callback for yt_dlp
             async def progress_callback(progress, total=None):
                 if ctx:
                     await ctx.report_progress(progress=progress, total=total)
@@ -264,12 +256,10 @@ def register_tools(mcp: FastMCP):
 
             downloader.set_progress_callback(progress_callback)
 
-            # Report initial progress
             if ctx:
                 await ctx.report_progress(progress=0, total=100)
                 logger.debug("Reported initial progress: 0/100")
 
-            # Perform the download
             file_path = downloader.download_video(link=video_url)
 
             if not file_path or not os.path.exists(file_path):
@@ -284,7 +274,6 @@ def register_tools(mcp: FastMCP):
                     "error": "Download failed or file not found",
                 }
 
-            # Report completion
             if ctx:
                 await ctx.report_progress(progress=100, total=100)
                 logger.debug("Reported final progress: 100/100")
@@ -317,7 +306,6 @@ def register_tools(mcp: FastMCP):
 
 
 def register_prompts(mcp: FastMCP):
-    # Prompts
     @mcp.prompt
     def download_video(video_url) -> str:
         """
@@ -363,7 +351,6 @@ def media_downloader_mcp():
         choices=["none", "static", "jwt", "oauth-proxy", "oidc-proxy", "remote-oauth"],
         help="Authentication type for MCP server: 'none' (disabled), 'static' (internal), 'jwt' (external token verification), 'oauth-proxy', 'oidc-proxy', 'remote-oauth' (external) (default: none)",
     )
-    # JWT/Token params
     parser.add_argument(
         "--token-jwks-uri", default=None, help="JWKS URI for JWT verification"
     )
@@ -404,7 +391,6 @@ def media_downloader_mcp():
         default=os.getenv("FASTMCP_SERVER_AUTH_JWT_REQUIRED_SCOPES"),
         help="Comma-separated list of required scopes (e.g., mediadownloader.read,mediadownloader.write).",
     )
-    # OAuth Proxy params
     parser.add_argument(
         "--oauth-upstream-auth-endpoint",
         default=None,
@@ -428,14 +414,12 @@ def media_downloader_mcp():
     parser.add_argument(
         "--oauth-base-url", default=None, help="Base URL for OAuth Proxy"
     )
-    # OIDC Proxy params
     parser.add_argument(
         "--oidc-config-url", default=None, help="OIDC configuration URL"
     )
     parser.add_argument("--oidc-client-id", default=None, help="OIDC client ID")
     parser.add_argument("--oidc-client-secret", default=None, help="OIDC client secret")
     parser.add_argument("--oidc-base-url", default=None, help="Base URL for OIDC Proxy")
-    # Remote OAuth params
     parser.add_argument(
         "--remote-auth-servers",
         default=None,
@@ -444,13 +428,11 @@ def media_downloader_mcp():
     parser.add_argument(
         "--remote-base-url", default=None, help="Base URL for Remote OAuth"
     )
-    # Common
     parser.add_argument(
         "--allowed-client-redirect-uris",
         default=None,
         help="Comma-separated list of allowed client redirect URIs",
     )
-    # Eunomia params
     parser.add_argument(
         "--eunomia-type",
         default="none",
@@ -465,7 +447,6 @@ def media_downloader_mcp():
     parser.add_argument(
         "--eunomia-remote-url", default=None, help="URL for remote Eunomia server"
     )
-    # Delegation params
     parser.add_argument(
         "--enable-delegation",
         action="store_true",
@@ -536,7 +517,6 @@ def media_downloader_mcp():
         print(f"Error: Port {args.port} is out of valid range (0-65535).")
         sys.exit(1)
 
-    # Update config with CLI arguments
     config["enable_delegation"] = args.enable_delegation
     config["audience"] = args.audience or config["audience"]
     config["delegated_scopes"] = args.delegated_scopes or config["delegated_scopes"]
@@ -546,7 +526,6 @@ def media_downloader_mcp():
         args.oidc_client_secret or config["oidc_client_secret"]
     )
 
-    # Configure delegation if enabled
     if config["enable_delegation"]:
         if args.auth_type != "oidc-proxy":
             logger.error("Token delegation requires auth-type=oidc-proxy")
@@ -566,7 +545,6 @@ def media_downloader_mcp():
             )
             sys.exit(1)
 
-        # Fetch OIDC configuration to get token_endpoint
         try:
             logger.info(
                 "Fetching OIDC configuration",
@@ -591,7 +569,6 @@ def media_downloader_mcp():
             )
             sys.exit(1)
 
-    # Set auth based on type
     auth = None
     allowed_uris = (
         args.allowed_client_redirect_uris.split(",")
@@ -609,7 +586,6 @@ def media_downloader_mcp():
             }
         )
     elif args.auth_type == "jwt":
-        # Fallback to env vars if not provided via CLI
         jwks_uri = args.token_jwks_uri or os.getenv("FASTMCP_SERVER_AUTH_JWT_JWKS_URI")
         issuer = args.token_issuer or os.getenv("FASTMCP_SERVER_AUTH_JWT_ISSUER")
         audience = args.token_audience or os.getenv("FASTMCP_SERVER_AUTH_JWT_AUDIENCE")
@@ -626,7 +602,6 @@ def media_downloader_mcp():
             logger.error("JWT requires --token-issuer and --token-audience")
             sys.exit(1)
 
-        # Load static public key from file if path is given
         if args.token_public_key and os.path.isfile(args.token_public_key):
             try:
                 with open(args.token_public_key, "r") as f:
@@ -637,15 +612,13 @@ def media_downloader_mcp():
                 logger.error(f"Failed to read public key file: {e}")
                 sys.exit(1)
         elif args.token_public_key:
-            public_key_pem = args.token_public_key  # Inline PEM
+            public_key_pem = args.token_public_key
 
-        # Validation: Conflicting options
         if jwks_uri and (algorithm or secret_or_key):
             logger.warning(
                 "JWKS mode ignores --token-algorithm and --token-secret/--token-public-key"
             )
 
-        # HMAC mode
         if algorithm and algorithm.startswith("HS"):
             if not secret_or_key:
                 logger.error(f"HMAC algorithm {algorithm} requires --token-secret")
@@ -657,7 +630,6 @@ def media_downloader_mcp():
         else:
             public_key = public_key_pem
 
-        # Required scopes
         required_scopes = None
         if args.required_scopes:
             required_scopes = [
@@ -794,7 +766,6 @@ def media_downloader_mcp():
             base_url=args.remote_base_url,
         )
 
-    # === 2. Build Middleware List ===
     middlewares: List[
         Union[
             UserTokenMiddleware,
@@ -814,7 +785,7 @@ def media_downloader_mcp():
     ]
 
     if config["enable_delegation"] or args.auth_type == "jwt":
-        middlewares.insert(0, UserTokenMiddleware(config=config))  # Must be first
+        middlewares.insert(0, UserTokenMiddleware(config=config))
 
     if args.eunomia_type in ["embedded", "remote"]:
         try:
