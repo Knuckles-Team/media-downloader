@@ -34,7 +34,7 @@ from pydantic import ValidationError
 from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 
-__version__ = "2.2.6"
+__version__ = "2.2.7"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -105,11 +105,17 @@ def create_agent(
     if mcp_url:
         if "sse" in mcp_url.lower():
             server = MCPServerSSE(
-                mcp_url, http_client=httpx.AsyncClient(verify=ssl_verify)
+                mcp_url,
+                http_client=httpx.AsyncClient(
+                    verify=ssl_verify, timeout=DEFAULT_TIMEOUT
+                ),
             )
         else:
             server = MCPServerStreamableHTTP(
-                mcp_url, http_client=httpx.AsyncClient(verify=ssl_verify)
+                mcp_url,
+                http_client=httpx.AsyncClient(
+                    verify=ssl_verify, timeout=DEFAULT_TIMEOUT
+                ),
             )
         agent_toolsets.append(server)
         logger.info(f"Connected to MCP Server: {mcp_url}")
@@ -117,7 +123,9 @@ def create_agent(
         mcp_toolset = load_mcp_servers(mcp_config)
         for server in mcp_toolset:
             if hasattr(server, "http_client"):
-                server.http_client = httpx.AsyncClient(verify=ssl_verify)
+                server.http_client = httpx.AsyncClient(
+                    verify=ssl_verify, timeout=DEFAULT_TIMEOUT
+                )
         agent_toolsets.extend(mcp_toolset)
         logger.info(f"Connected to MCP Config JSON: {mcp_toolset}")
 
@@ -133,6 +141,7 @@ def create_agent(
         base_url=base_url,
         api_key=api_key,
         ssl_verify=ssl_verify,
+        timeout=DEFAULT_TIMEOUT,
     )
 
     logger.info("Initializing Agent...")
@@ -194,6 +203,7 @@ def create_agent_server(
         mcp_config=mcp_config,
         skills_directory=skills_directory,
         ssl_verify=ssl_verify,
+        timeout=DEFAULT_TIMEOUT,
     )
 
     if skills_directory and os.path.exists(skills_directory):
