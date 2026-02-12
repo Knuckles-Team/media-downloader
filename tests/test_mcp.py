@@ -16,7 +16,6 @@ def test_server(
         },
     }
     try:
-        # Run the server as a subprocess and pipe the JSON request
         process = subprocess.run(
             ["python", "-m", "media_downloader", "--transport=stdio"],
             input=json.dumps(payload),
@@ -26,7 +25,6 @@ def test_server(
         print("Server response:", process.stdout)
         if process.stderr:
             print("Errors:", process.stderr)
-        # Parse the response to extract the result
         try:
             response = json.loads(process.stdout)
             if "result" in response:
@@ -40,7 +38,6 @@ def test_server(
 
 
 if __name__ == "__main__":
-    # Replace with a valid URL supported by MediaDownloader
     test_server(
         video_url="https://www.youtube.com/watch?v=Tkv_guk57i0",
         download_directory="./downloads",
