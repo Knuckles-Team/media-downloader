@@ -25,7 +25,7 @@ from media_downloader.media_downloader import MediaDownloader
 from media_downloader.utils import to_boolean, to_integer
 from media_downloader.middlewares import JWTClaimsLoggingMiddleware, UserTokenMiddleware
 
-__version__ = "2.2.9"
+__version__ = "2.2.10"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
