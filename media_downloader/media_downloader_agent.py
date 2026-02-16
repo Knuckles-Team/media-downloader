@@ -34,7 +34,7 @@ from pydantic import ValidationError
 from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 
-__version__ = "2.2.8"
+__version__ = "2.2.9"
 
 logging.basicConfig(
     level=logging.INFO,

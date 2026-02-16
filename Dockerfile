@@ -45,6 +45,7 @@ ENV HOST=${HOST} \
     EUNOMIA_TYPE=${EUNOMIA_TYPE} \
     EUNOMIA_POLICY_FILE=${EUNOMIA_POLICY_FILE} \
     EUNOMIA_REMOTE_URL=${EUNOMIA_REMOTE_URL} \
+    PYTHONUNBUFFERED=1 \
     DENO_INSTALL="/root/.deno" \
     PATH="/root/.local/bin:/usr/local/bin:$DENO_INSTALL/bin:${PATH}" \
     UV_HTTP_TIMEOUT=3600 \
@@ -56,6 +57,6 @@ RUN apt update \
     && apt install ffmpeg curl make unzip -y \
     && curl -fsSL https://deno.land/install.sh | sh \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && uv pip install --system --upgrade --verbose --no-cache --break-system-packages --prerelease=allow "media-downloader[all]>=2.2.8"
+    && uv pip install --system --upgrade --verbose --no-cache --break-system-packages --prerelease=allow "media-downloader[all]>=2.2.9"
 
 CMD ["media-downloader-mcp"]
