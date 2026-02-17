@@ -34,7 +34,7 @@ from pydantic import ValidationError
 from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 
-__version__ = "2.2.11"
+__version__ = "2.2.12"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -377,9 +377,7 @@ def agent_server():
     args = parser.parse_args()
 
     if hasattr(args, "help") and args.help:
-
-        usage()
-
+        parser.print_help()
         sys.exit(0)
 
     if args.debug:
@@ -412,29 +410,6 @@ def agent_server():
         port=args.port,
         enable_web_ui=args.web,
         ssl_verify=not args.insecure,
-    )
-
-
-def usage():
-    print(
-        f"Media Downloader ({__version__}): CLI Tool\n\n"
-        "Usage:\n"
-        "--host                [ Host to bind the server to ]\n"
-        "--port                [ Port to bind the server to ]\n"
-        "--debug               [ Debug mode ]\n"
-        "--reload              [ Enable auto-reload ]\n"
-        "--provider            [ LLM Provider ]\n"
-        "--model-id            [ LLM Model ID ]\n"
-        "--base-url            [ LLM Base URL (for OpenAI compatible providers) ]\n"
-        "--api-key             [ LLM API Key ]\n"
-        "--mcp-url             [ MCP Server URL ]\n"
-        "--mcp-config          [ MCP Server Config ]\n"
-        "--custom-skills-directory    [ Directory containing additional custom agent skills ]\n"
-        "--web                 [ Enable Pydantic AI Web UI ]\n"
-        "\n"
-        "Examples:\n"
-        "  [Simple]  media-downloader-agent \n"
-        '  [Complex] media-downloader-agent --host "value" --port "value" --debug "value" --reload --provider "value" --model-id "value" --base-url "value" --api-key "value" --mcp-url "value" --mcp-config "value" --custom-skills-directory "value" --web\n'
     )
 
 

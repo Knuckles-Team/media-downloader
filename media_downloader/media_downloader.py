@@ -10,7 +10,7 @@ import requests
 import yt_dlp
 from multiprocessing import Pool
 
-__version__ = "2.2.11"
+__version__ = "2.2.12"
 
 
 class YtDlpLogger:
@@ -172,22 +172,6 @@ class MediaDownloader:
             pool.join()
 
 
-def usage():
-    print(
-        f"Media Downloader ({__version__}): Download media from various sources.\n\n"
-        "Usage:\n"
-        "-a | --audio        [ Download audio only ]\n"
-        "-c | --channel      [ Download videos from a channel URL ]\n"
-        "-d | --directory    [ Specify download directory ]\n"
-        "-f | --file         [ Read URLs from a file ]\n"
-        "-l | --links        [ Comma-separated list of URLs to download ]\n"
-        "\n"
-        "Examples:\n"
-        "  [Simple]  media-downloader \n"
-        '  [Complex] media-downloader --audio --channel "value" --directory "value" --file "value" --links "value"\n'
-    )
-
-
 def media_downloader():
     parser = argparse.ArgumentParser(
         add_help=False, description="Download media from various sources."
@@ -207,9 +191,7 @@ def media_downloader():
     args = parser.parse_args()
 
     if hasattr(args, "help") and args.help:
-
-        usage()
-
+        parser.print_help()
         sys.exit(0)
 
     logger = logging.getLogger("MediaDownloader")
