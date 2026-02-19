@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "media-downloader"
-version = "2.2.13"
+version = "2.2.14"
 description = "Download audio/videos from the internet!\nHost an MCP Server for Agentic AI to download videos!"
 readme = "README.md"
 authors = [{ name = "Audel Rouhi", email = "knucklessg1@gmail.com" }]
@@ -18,6 +18,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "tree-sitter>=0.23.2",
     "yt-dlp[default]>=2025.12.08",
 ]
 
