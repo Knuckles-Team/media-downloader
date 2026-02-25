@@ -12,8 +12,8 @@ CORE_MODULES = [
 ]
 
 OPTIONAL_MODULES = {
-    "media_downloader.media_downloader_agent": "a2a",
-    "media_downloader.media_downloader_mcp": "mcp",
+    "media_downloader.agent": "agent",
+    "media_downloader.mcp": "mcp",
 }
 
 
@@ -47,12 +47,12 @@ for module_name, extra_name in OPTIONAL_MODULES.items():
     else:
         globals()[f"_{extra_name.upper()}_AVAILABLE"] = False
 
-_MCP_AVAILABLE = OPTIONAL_MODULES.get("media_downloader.media_downloader_mcp") in [
+_MCP_AVAILABLE = OPTIONAL_MODULES.get("media_downloader.mcp") in [
     m.__name__ for m in globals().values() if hasattr(m, "__name__")
 ]
-_A2A_AVAILABLE = "media_downloader.media_downloader_agent" in globals()
+_AGENT_AVAILABLE = "media_downloader.agent" in globals()
 
-__all__.extend(["_MCP_AVAILABLE", "_A2A_AVAILABLE"])
+__all__.extend(["_MCP_AVAILABLE", "_AGENT_AVAILABLE"])
 
 
 """

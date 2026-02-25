@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
-from media_downloader.media_downloader_mcp import (
+from media_downloader.mcp import (
     media_downloader_mcp,
 )
 

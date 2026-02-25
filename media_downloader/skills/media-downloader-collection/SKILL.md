@@ -1,6 +1,7 @@
 ---
 name: media-downloader-collection
 description: Media Downloader Tools
+tags: [collection]
 ---
 
 ### Overview
