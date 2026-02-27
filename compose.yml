@@ -67,6 +67,7 @@ services:
       - "MODEL_ID=qwen3:4b"
       - "DEBUG=False"
       - "ENABLE_WEB_UI=True"
+      - "ENABLE_OTEL=True"
     ports:
       - "9000:9000"
     healthcheck:
