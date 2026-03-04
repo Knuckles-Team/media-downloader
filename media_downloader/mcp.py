@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
+from dotenv import load_dotenv, find_dotenv
 import os
 import sys
 import logging
@@ -31,7 +32,7 @@ from agent_utilities.middlewares import (
     JWTClaimsLoggingMiddleware,
 )
 
-__version__ = "2.2.24"
+__version__ = "2.2.25"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -39,11 +40,12 @@ logging.basicConfig(
 logger = get_logger("MediaDownloaderMCPServer")
 
 
-def register_tools(mcp: FastMCP):
-    @mcp.custom_route("/health", methods=["GET"])
+def register_misc_tools(mcp: FastMCP):
     async def health_check(request: Request) -> JSONResponse:
         return JSONResponse({"status": "OK"})
 
+
+def register_collection_management_tools(mcp: FastMCP):
     @mcp.tool(
         annotations={
             "title": "Download Media",
@@ -80,102 +82,6 @@ def register_tools(mcp: FastMCP):
                 "output": output,
                 "return_code": result.returncode,
             }
-        except Exception as e:
-            return {"status": 500, "error": str(e)}
-
-    @mcp.tool(
-        annotations={
-            "title": "Text Editor",
-            "readOnlyHint": False,
-            "destructiveHint": True,
-            "idempotentHint": False,
-            "openWorldHint": True,
-        },
-        tags={"text_editor", "files"},
-    )
-    async def text_editor(
-        command: str = Field(
-            description="The command to perform: view, create, str_replace, insert, undo_edit"
-        ),
-        path: str = Field(description="Path to the file"),
-        file_text: Optional[str] = Field(
-            description="Content to write or insert", default=None
-        ),
-        view_range: Optional[List[int]] = Field(
-            description="Line range to view [start, end]", default=None
-        ),
-        old_str: Optional[str] = Field(description="String to replace", default=None),
-        new_str: Optional[str] = Field(description="Replacement string", default=None),
-        insert_line: Optional[int] = Field(
-            description="Line number to insert at", default=None
-        ),
-        ctx: Context = Field(
-            description="MCP context for progress reporting.", default=None
-        ),
-    ) -> Dict[str, Any]:
-        """
-        View and edit files on the local filesystem.
-        """
-        logger.debug(f"Text editor command: {command} on {path}")
-        expanded_path = os.path.abspath(os.path.expanduser(path))
-
-        try:
-            if command == "view":
-                if not os.path.exists(expanded_path):
-                    return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
-                    lines = f.readlines()
-                content = "".join(lines)
-                if view_range and len(view_range) == 2:
-                    start, end = view_range
-                    start = max(1, start)
-                    end = min(len(lines), end)
-                    content = "".join(lines[start - 1 : end])
-                return {"status": 200, "content": content, "path": expanded_path}
-
-            elif command == "create":
-                if os.path.exists(expanded_path):
-                    return {"status": 400, "error": "File already exists"}
-                os.makedirs(os.path.dirname(expanded_path), exist_ok=True)
-                with open(expanded_path, "w") as f:
-                    f.write(file_text or "")
-                return {"status": 200, "message": "File created", "path": expanded_path}
-
-            elif command == "str_replace":
-                if not os.path.exists(expanded_path):
-                    return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
-                    content = f.read()
-                if old_str not in content:
-                    return {"status": 400, "error": "Target string not found"}
-                new_content = content.replace(old_str, new_str or "", 1)
-                with open(expanded_path, "w") as f:
-                    f.write(new_content)
-                return {"status": 200, "message": "File updated", "path": expanded_path}
-
-            elif command == "insert":
-                if not os.path.exists(expanded_path):
-                    return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
-                    lines = f.readlines()
-                if insert_line is None:
-                    return {"status": 400, "error": "insert_line required"}
-                idx = max(0, insert_line)
-                new_lines = file_text.splitlines(keepends=True)
-                if new_lines and not new_lines[-1].endswith("\n"):
-                    new_lines[-1] += "\n"
-
-                lines[idx:idx] = new_lines
-                with open(expanded_path, "w") as f:
-                    f.writelines(lines)
-                return {
-                    "status": 200,
-                    "message": "Content inserted",
-                    "path": expanded_path,
-                }
-
-            return {"status": 400, "error": f"Unknown command {command}"}
-
         except Exception as e:
             return {"status": 500, "error": str(e)}
 
@@ -290,6 +196,104 @@ def register_tools(mcp: FastMCP):
             }
 
 
+def register_text_editor_tools(mcp: FastMCP):
+    @mcp.tool(
+        annotations={
+            "title": "Text Editor",
+            "readOnlyHint": False,
+            "destructiveHint": True,
+            "idempotentHint": False,
+            "openWorldHint": True,
+        },
+        tags={"text_editor", "files"},
+    )
+    async def text_editor(
+        command: str = Field(
+            description="The command to perform: view, create, str_replace, insert, undo_edit"
+        ),
+        path: str = Field(description="Path to the file"),
+        file_text: Optional[str] = Field(
+            description="Content to write or insert", default=None
+        ),
+        view_range: Optional[List[int]] = Field(
+            description="Line range to view [start, end]", default=None
+        ),
+        old_str: Optional[str] = Field(description="String to replace", default=None),
+        new_str: Optional[str] = Field(description="Replacement string", default=None),
+        insert_line: Optional[int] = Field(
+            description="Line number to insert at", default=None
+        ),
+        ctx: Context = Field(
+            description="MCP context for progress reporting.", default=None
+        ),
+    ) -> Dict[str, Any]:
+        """
+        View and edit files on the local filesystem.
+        """
+        logger.debug(f"Text editor command: {command} on {path}")
+        expanded_path = os.path.abspath(os.path.expanduser(path))
+
+        try:
+            if command == "view":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    lines = f.readlines()
+                content = "".join(lines)
+                if view_range and len(view_range) == 2:
+                    start, end = view_range
+                    start = max(1, start)
+                    end = min(len(lines), end)
+                    content = "".join(lines[start - 1 : end])
+                return {"status": 200, "content": content, "path": expanded_path}
+
+            elif command == "create":
+                if os.path.exists(expanded_path):
+                    return {"status": 400, "error": "File already exists"}
+                os.makedirs(os.path.dirname(expanded_path), exist_ok=True)
+                with open(expanded_path, "w") as f:
+                    f.write(file_text or "")
+                return {"status": 200, "message": "File created", "path": expanded_path}
+
+            elif command == "str_replace":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    content = f.read()
+                if old_str not in content:
+                    return {"status": 400, "error": "Target string not found"}
+                new_content = content.replace(old_str, new_str or "", 1)
+                with open(expanded_path, "w") as f:
+                    f.write(new_content)
+                return {"status": 200, "message": "File updated", "path": expanded_path}
+
+            elif command == "insert":
+                if not os.path.exists(expanded_path):
+                    return {"status": 404, "error": "File not found"}
+                with open(expanded_path, "r") as f:
+                    lines = f.readlines()
+                if insert_line is None:
+                    return {"status": 400, "error": "insert_line required"}
+                idx = max(0, insert_line)
+                new_lines = file_text.splitlines(keepends=True)
+                if new_lines and not new_lines[-1].endswith("\n"):
+                    new_lines[-1] += "\n"
+
+                lines[idx:idx] = new_lines
+                with open(expanded_path, "w") as f:
+                    f.writelines(lines)
+                return {
+                    "status": 200,
+                    "message": "Content inserted",
+                    "path": expanded_path,
+                }
+
+            return {"status": 400, "error": f"Unknown command {command}"}
+
+        except Exception as e:
+            return {"status": 500, "error": str(e)}
+
+
 def register_prompts(mcp: FastMCP):
     @mcp.prompt
     def download_video(video_url) -> str:
@@ -307,6 +311,7 @@ def register_prompts(mcp: FastMCP):
 
 
 def mcp_server():
+    load_dotenv(find_dotenv())
     parser = create_mcp_parser()
 
     args = parser.parse_args()
@@ -608,7 +613,17 @@ def mcp_server():
             sys.exit(1)
 
     mcp = FastMCP("MediaDownloader", auth=auth)
-    register_tools(mcp)
+    DEFAULT_MISCTOOL = to_boolean(os.getenv("MISCTOOL", "True"))
+    if DEFAULT_MISCTOOL:
+        register_misc_tools(mcp)
+    DEFAULT_COLLECTION_MANAGEMENTTOOL = to_boolean(
+        os.getenv("COLLECTION_MANAGEMENTTOOL", "True")
+    )
+    if DEFAULT_COLLECTION_MANAGEMENTTOOL:
+        register_collection_management_tools(mcp)
+    DEFAULT_TEXT_EDITORTOOL = to_boolean(os.getenv("TEXT_EDITORTOOL", "True"))
+    if DEFAULT_TEXT_EDITORTOOL:
+        register_text_editor_tools(mcp)
     register_prompts(mcp)
 
     for mw in middlewares:
