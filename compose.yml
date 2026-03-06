@@ -1,52 +1,15 @@
 ---
 services:
-  media-downloader-mcp:
-    image: docker.io/knucklessg1/media-downloader:latest
-    #    build:
-    #      context: . # Debug
-    #      dockerfile: debug.Dockerfile
-    container_name: media-downloader-mcp
-    hostname: media-downloader-mcp
-    command: [ "media-downloader-mcp" ]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    restart: always
-
-    environment:
-      - "PYTHONUNBUFFERED=1"
-      - "HOST=0.0.0.0"
-      - "PORT=8000"
-      - "TRANSPORT=streamable-http"
-      - "DOWNLOAD_DIRECTORY=/downloads"
-      - "AUDIO_ONLY=false"
-    volumes:
-      - ./mcp/downloads:/downloads:rw
-    ports:
-      - "8000:8000"
-    healthcheck:
-      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
   media-downloader-agent:
-    image: docker.io/knucklessg1/media-downloader:latest
-    #    build:
-    #      context: . # Debug
-    #      dockerfile: debug.Dockerfile
+    # image: docker.io/knucklessg1/media-downloader:latest
+    build:
+      context: . # Debug
+      dockerfile: debug.Dockerfile
     container_name: media-downloader-agent
     hostname: media-downloader-agent
     command: [ "media-downloader-agent" ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      - media-downloader-mcp
     logging:
       driver: json-file
       options:
@@ -55,12 +18,13 @@ services:
     restart: always
     env_file:
       - .env
-
     environment:
       - "PYTHONUNBUFFERED=1"
       - "HOST=0.0.0.0"
-      - "PORT=9000"
-      - "MCP_URL=http://media-downloader-mcp:8000/mcp"
+      - "PORT=9797"
+      - "TRANSPORT=stdio"
+      - "DOWNLOAD_DIRECTORY=/downloads"
+      - "AUDIO_ONLY=false"
       - "PROVIDER=openai"
       - "LLM_BASE_URL=http://ollama:11434/v1"
       - "LLM_API_KEY=${LLM_API_KEY:-llama}"
@@ -69,9 +33,9 @@ services:
       - "ENABLE_WEB_UI=True"
       - "ENABLE_OTEL=True"
     ports:
-      - "9000:9000"
+      - "9797:9797"
     healthcheck:
-      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')" ]
+      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9797/health')" ]
       interval: 30s
       timeout: 10s
       retries: 3
