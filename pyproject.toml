@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "media-downloader"
-version = "2.2.28"
+version = "2.2.29"
 description = "Download audio/videos from the internet!\nHost an MCP Server for Agentic AI to download videos!"
 readme = "README.md"
 authors = [{ name = "Audel Rouhi", email = "knucklessg1@gmail.com" }]
@@ -17,18 +17,18 @@ classifiers = [
     "Programming Language :: Python :: 3"]
 requires-python = ">=3.10"
 dependencies = [
-    "agent-utilities>=0.2.15",
+    "agent-utilities>=0.2.16",
     "yt-dlp[default]>=2025.12.08"]
 
 [project.optional-dependencies]
 mcp = [
-    "agent-utilities[mcp]>=0.2.15"]
+    "agent-utilities[mcp]>=0.2.16"]
 
 agent = [
-    "agent-utilities[agent,logfire]>=0.2.15"]
+    "agent-utilities[agent,logfire]>=0.2.16"]
 
 all = [
-    "agent-utilities[mcp,agent,logfire]>=0.2.15"]
+    "agent-utilities[mcp,agent,logfire]>=0.2.16"]
 
 [project.scripts]
 media-downloader = "media_downloader.media_downloader:media_downloader"
