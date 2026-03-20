@@ -1,8 +1,4 @@
-#!/usr/bin/python
-# coding: utf-8
-from media_downloader.mcp_server import (
-    media_downloader_mcp,
-)
+from media_downloader.agent_server import agent_server
 
 if __name__ == "__main__":
-    media_downloader_mcp()
+    agent_server()
