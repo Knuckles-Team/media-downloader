@@ -16,10 +16,9 @@ from media_downloader.media_downloader import MediaDownloader
 from agent_utilities.base_utilities import to_boolean
 from agent_utilities.mcp_utilities import (
     create_mcp_server,
-    config,
 )
 
-__version__ = "2.2.45"
+__version__ = "2.2.47"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -297,7 +296,8 @@ def register_prompts(mcp: FastMCP):
         return f"Download the following media as audio only: {audio_url}."
 
 
-def mcp_server():
+def get_mcp_instance() -> tuple[Any, Any, Any, Any]:
+    """Initialize and return the MCP instance, args, and middlewares."""
     load_dotenv(find_dotenv())
 
     args, mcp, middlewares = create_mcp_server(
@@ -321,13 +321,17 @@ def mcp_server():
 
     for mw in middlewares:
         mcp.add_middleware(mw)
+    registered_tags = []
+    return mcp, args, middlewares, registered_tags
 
-    print(f"Media Downloader MCP v{__version__}")
-    print("\nStarting Media Downloader MCP Server")
-    print(f"  Transport: {args.transport.upper()}")
-    print(f"  Auth: {args.auth_type}")
-    print(f"  Delegation: {'ON' if config['enable_delegation'] else 'OFF'}")
-    print(f"  Eunomia: {args.eunomia_type}")
+
+def mcp_server() -> None:
+    mcp, args, middlewares, registered_tags = get_mcp_instance()
+    print(f"{args.name or 'media-downloader'} MCP v{__version__}", file=sys.stderr)
+    print("\nStarting MCP Server", file=sys.stderr)
+    print(f"  Transport: {args.transport.upper()}", file=sys.stderr)
+    print(f"  Auth: {args.auth_type}", file=sys.stderr)
+    print(f"  Dynamic Tags Loaded: {len(set(registered_tags))}", file=sys.stderr)
 
     if args.transport == "stdio":
         mcp.run(transport="stdio")
