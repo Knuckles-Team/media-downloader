@@ -1,5 +1,5 @@
 #!/usr/bin/python
-               
+
 import subprocess
 import json
 
