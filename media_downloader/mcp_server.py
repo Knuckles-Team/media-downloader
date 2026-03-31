@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# coding: utf-8
+
 from dotenv import load_dotenv, find_dotenv
 import os
 import sys
@@ -18,7 +18,7 @@ from agent_utilities.mcp_utilities import (
     create_mcp_server,
 )
 
-__version__ = "2.2.48"
+__version__ = "2.2.49"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "media": {
+      "command": "media-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "MEDIA_URL": "${MEDIA_URL:-http://localhost:8080}",
+        "MEDIA_TOKEN": "${MEDIA_TOKEN}"
+      }
+    }
+  }
+}

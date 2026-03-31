@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+
 
 import os
 import sys
@@ -10,7 +10,7 @@ import requests
 import yt_dlp
 from multiprocessing import Pool
 
-__version__ = "2.2.48"
+__version__ = "2.2.49"
 
 
 class YtDlpLogger:
