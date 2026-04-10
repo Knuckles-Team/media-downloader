@@ -55,10 +55,15 @@ ENV HOST=${HOST} \
 WORKDIR /app
 COPY . /app
 RUN apt update \
-    && apt upgrade -y \
-    && apt install ffmpeg curl make unzip -y \
-    && curl -fsSL https://deno.land/install.sh | sh \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && uv pip install --system --upgrade --verbose --no-cache --break-system-packages --prerelease=allow .[all]
+     && apt upgrade -y \
+     && apt install ffmpeg curl make unzip -y \
+     && curl -fsSL https://deno.land/install.sh | sh \
+     && curl -LsSf https://astral.sh/uv/install.sh | sh \
+     && curl -sS https://starship.rs/install.sh | sh -s -- --yes \
+    && mkdir -p /root/.config \
+    && echo 'eval "$(starship init bash)"' >> /root/.bashrc \ \
+    uv pip install --system --upgrade --verbose --no-cache --break-system-packages --prerelease=allow .[all]
+
+COPY starship.toml /root/.config/starship.toml
 
 CMD ["media-downloader-mcp"]

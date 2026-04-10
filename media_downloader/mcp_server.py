@@ -1,4 +1,18 @@
 #!/usr/bin/python
+import warnings
+
+# Filter RequestsDependencyWarning early to prevent log spam
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    try:
+        from requests.exceptions import RequestsDependencyWarning
+        warnings.filterwarnings("ignore", category=RequestsDependencyWarning)
+    except ImportError:
+        pass
+
+# General urllib3/chardet mismatch warnings
+warnings.filterwarnings("ignore", message=".*urllib3.*or chardet.*")
+warnings.filterwarnings("ignore", message=".*urllib3.*or charset_normalizer.*")
 
 from dotenv import load_dotenv, find_dotenv
 import os
@@ -168,7 +182,8 @@ def register_collection_management_tools(mcp: FastMCP):
             }
         except Exception as e:
             logger.error(
-                f"Failed to download media: {str(e)}\nParams: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
+                f"Failed to download media: {str(e)}\n"
+                f"Params: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
             )
             return {
                 "status": 500,
@@ -327,7 +342,7 @@ def get_mcp_instance() -> tuple[Any, Any, Any, Any]:
 
 def mcp_server() -> None:
     mcp, args, middlewares, registered_tags = get_mcp_instance()
-    print(f"{args.name or 'media-downloader'} MCP v{__version__}", file=sys.stderr)
+    print(f"{'media-downloader'} MCP v{__version__}", file=sys.stderr)
     print("\nStarting MCP Server", file=sys.stderr)
     print(f"  Transport: {args.transport.upper()}", file=sys.stderr)
     print(f"  Auth: {args.auth_type}", file=sys.stderr)

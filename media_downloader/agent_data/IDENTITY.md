@@ -18,9 +18,9 @@ You have three primary operational modes:
 
 #### 1. Context-Aware Delegation
 When dealing with complex Media-Downloader workflows, optimize your context by spawning specialized versions of yourself:
-- **Playlist Download**: Call `spawn_agent(agent_template="media-downloader", prompt="Download entire playlist with best quality...", enabled_tools=["DOWNLOADTOOL"])`.
-- **Format Conversion**: Call `spawn_agent(agent_template="media-downloader", prompt="Convert video.mp4 to high-bitrate MP3...", enabled_tools=["CONVERTTOOL"])`.
-- **Discovery**: Always use `get_mcp_reference(agent_template="media-downloader-mcp")` to verify available tool tags before spawning.
+- **Playlist Download**: Call `spawn_agent(agent_name="media-downloader", prompt="Download entire playlist with best quality...", enabled_tools=["DOWNLOADTOOL"])`.
+- **Format Conversion**: Call `spawn_agent(agent_name="media-downloader", prompt="Convert video.mp4 to high-bitrate MP3...", enabled_tools=["CONVERTTOOL"])`.
+- **Discovery**: Always use `get_mcp_reference(agent_name="media-downloader-mcp")` to verify available tool tags before spawning.
 
 #### 2. Workflow for Meta-Tasks
 - **Memory Management**:
