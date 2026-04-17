@@ -21,7 +21,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.2.54*
+*Version: 2.2.55*
 
 ## Overview
 
@@ -207,7 +207,6 @@ docker run -d \
   -e EUNOMIA_TYPE=none \
   -e DOWNLOAD_DIRECTORY=/downloads \
   -e AUDIO_ONLY=false \
-  -v "/home/genius/Downloads:/downloads" \
   knucklessg1/media-downloader:latest
 ```
 
@@ -230,7 +229,6 @@ docker run -d \
   -e EUNOMIA_POLICY_FILE=/app/mcp_policies.json \
   -e DOWNLOAD_DIRECTORY=/downloads \
   -e AUDIO_ONLY=false \
-  -v "/home/genius/Downloads:/downloads" \
   knucklessg1/media-downloader:latest
 ```
 
@@ -280,7 +278,6 @@ services:
       - 8004:8004
     volumes:
       - ./mcp_policies.json:/app/mcp_policies.json
-      - "/home/genius/Downloads:/downloads"
 ```
 
 Run the service:

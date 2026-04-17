@@ -6,6 +6,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     try:
         from requests.exceptions import RequestsDependencyWarning
+
         warnings.filterwarnings("ignore", category=RequestsDependencyWarning)
     except ImportError:
         pass
@@ -21,8 +22,6 @@ import logging
 from typing import Optional, Dict, Any, List
 
 import subprocess
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 from pydantic import Field
 from fastmcp import FastMCP, Context
 from fastmcp.utilities.logging import get_logger
@@ -32,7 +31,7 @@ from agent_utilities.mcp_utilities import (
     create_mcp_server,
 )
 
-__version__ = "2.2.54"
+__version__ = "2.2.55"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -41,8 +40,8 @@ logger = get_logger("MediaDownloaderMCPServer")
 
 
 def register_misc_tools(mcp: FastMCP):
-    async def health_check(request: Request) -> JSONResponse:
-        return JSONResponse({"status": "OK"})
+    pass
+    pass
 
 
 def register_collection_management_tools(mcp: FastMCP):
