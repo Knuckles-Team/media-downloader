@@ -1574,7 +1574,7 @@ wheels = [
 
 [[package]]
 name = "media-downloader"
-version = "2.2.54"
+version = "2.2.55"
 source = { editable = "." }
 dependencies = [
     { name = "agent-utilities" },

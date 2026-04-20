@@ -31,7 +31,9 @@ all = [
     "agent-utilities[mcp,agent,logfire]>=0.2.31"]
 
 [project.scripts]
+media-downloader = "media_downloader.media_downloader:main"
 media-downloader-mcp = "media_downloader.mcp_server:mcp_server"
+media-downloader-agent = "media_downloader.agent_server:agent_server"
 
 [tool.setuptools.package-data]
 media_downloader = [ "mcp_config.json", "agent_data/**"]
