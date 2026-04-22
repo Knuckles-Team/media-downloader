@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80.9.0", "wheel"]
+requires = [ "setuptools>=80.9.0", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,39 +7,45 @@ name = "media-downloader"
 version = "2.2.55"
 description = "Download audio/videos from the internet!\nHost an MCP Server for Agentic AI to download videos!"
 readme = "README.md"
-authors = [{ name = "Audel Rouhi", email = "knucklessg1@gmail.com" }]
-license = { text = "MIT" }
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "License :: Public Domain",
-    "Environment :: Console",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3"]
+classifiers = [ "Development Status :: 5 - Production/Stable", "License :: Public Domain", "Environment :: Console", "Operating System :: POSIX :: Linux", "Programming Language :: Python :: 3",]
 requires-python = ">=3.10"
-dependencies = [
-    "agent-utilities>=0.2.31",
-    "yt-dlp[default]>=2025.12.08"]
+dependencies = [ "agent-utilities>=0.2.31", "yt-dlp[default]>=2025.12.08",]
+[[project.authors]]
+name = "Audel Rouhi"
+email = "knucklessg1@gmail.com"
+
+[project.license]
+text = "MIT"
 
 [project.optional-dependencies]
-mcp = [
-    "agent-utilities[mcp]>=0.2.31"]
-
-agent = [
-    "agent-utilities[agent,logfire]>=0.2.31"]
-
-all = [
-    "agent-utilities[mcp,agent,logfire]>=0.2.31"]
+mcp = [ "agent-utilities[mcp]>=0.2.31",]
+agent = [ "agent-utilities[agent,logfire]>=0.2.31",]
+all = [ "agent-utilities[mcp,agent,logfire]>=0.2.31",]
+test = [ "pytest", "pytest-asyncio",]
 
 [project.scripts]
 media-downloader = "media_downloader.media_downloader:main"
 media-downloader-mcp = "media_downloader.mcp_server:mcp_server"
 media-downloader-agent = "media_downloader.agent_server:agent_server"
 
-[tool.setuptools.package-data]
-media_downloader = [ "mcp_config.json", "agent_data/**"]
-
-[tool.setuptools.packages.find]
-where = ["."]
-
 [tool.setuptools]
 include-package-data = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.setuptools.package-data]
+media_downloader = [ "mcp_config.json", "agent_data/**",]
+
+[tool.ruff.lint]
+select = [ "E", "F", "I", "UP", "B",]
+ignore = [ "E402", "E501", "B008",]
+
+[tool.setuptools.packages.find]
+where = [ ".",]

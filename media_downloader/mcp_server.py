@@ -15,21 +15,22 @@ with warnings.catch_warnings():
 warnings.filterwarnings("ignore", message=".*urllib3.*or chardet.*")
 warnings.filterwarnings("ignore", message=".*urllib3.*or charset_normalizer.*")
 
-from dotenv import load_dotenv, find_dotenv
-import os
-import sys
 import logging
-from typing import Optional, Dict, Any, List
-
+import os
 import subprocess
-from pydantic import Field
-from fastmcp import FastMCP, Context
-from fastmcp.utilities.logging import get_logger
-from media_downloader.media_downloader import MediaDownloader
+import sys
+from typing import Any
+
 from agent_utilities.base_utilities import to_boolean
 from agent_utilities.mcp_utilities import (
     create_mcp_server,
 )
+from dotenv import find_dotenv, load_dotenv
+from fastmcp import Context, FastMCP
+from fastmcp.utilities.logging import get_logger
+from pydantic import Field
+
+from media_downloader.media_downloader import MediaDownloader
 
 __version__ = "2.2.55"
 
@@ -60,7 +61,7 @@ def register_collection_management_tools(mcp: FastMCP):
         ctx: Context = Field(
             description="MCP context for progress reporting.", default=None
         ),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Run a bash command on the local system.
         """
@@ -96,18 +97,18 @@ def register_collection_management_tools(mcp: FastMCP):
     )
     async def download_media(
         video_url: str = Field(description="Video URL to Download", default=None),
-        download_directory: Optional[str] = Field(
+        download_directory: str | None = Field(
             description="The directory where the media will be saved. If None, uses default directory.",
             default=os.environ.get("DOWNLOAD_DIRECTORY", None),
         ),
-        audio_only: Optional[bool] = Field(
+        audio_only: bool | None = Field(
             description="Downloads only the audio",
             default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
         ),
         ctx: Context = Field(
             description="MCP context for progress reporting.", default=None
         ),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Downloads media from a given URL to the specified directory. Download as a video or audio file.
         Returns a Dictionary response with status, download directory, audio only, and other details.
@@ -132,7 +133,7 @@ def register_collection_management_tools(mcp: FastMCP):
             if download_directory:
                 download_directory = os.path.expanduser(download_directory)
             else:
-                download_directory = f'{os.path.expanduser("~")}/Downloads'
+                download_directory = f"{os.path.expanduser('~')}/Downloads"
             os.makedirs(download_directory, exist_ok=True)
 
             downloader = MediaDownloader(
@@ -212,21 +213,21 @@ def register_text_editor_tools(mcp: FastMCP):
             description="The command to perform: view, create, str_replace, insert, undo_edit"
         ),
         path: str = Field(description="Path to the file"),
-        file_text: Optional[str] = Field(
+        file_text: str | None = Field(
             description="Content to write or insert", default=None
         ),
-        view_range: Optional[List[int]] = Field(
+        view_range: list[int] | None = Field(
             description="Line range to view [start, end]", default=None
         ),
-        old_str: Optional[str] = Field(description="String to replace", default=None),
-        new_str: Optional[str] = Field(description="Replacement string", default=None),
-        insert_line: Optional[int] = Field(
+        old_str: str | None = Field(description="String to replace", default=None),
+        new_str: str | None = Field(description="Replacement string", default=None),
+        insert_line: int | None = Field(
             description="Line number to insert at", default=None
         ),
         ctx: Context = Field(
             description="MCP context for progress reporting.", default=None
         ),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         View and edit files on the local filesystem.
         """
@@ -237,7 +238,7 @@ def register_text_editor_tools(mcp: FastMCP):
             if command == "view":
                 if not os.path.exists(expanded_path):
                     return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
+                with open(expanded_path) as f:
                     lines = f.readlines()
                 content = "".join(lines)
                 if view_range and len(view_range) == 2:
@@ -258,7 +259,7 @@ def register_text_editor_tools(mcp: FastMCP):
             elif command == "str_replace":
                 if not os.path.exists(expanded_path):
                     return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
+                with open(expanded_path) as f:
                     content = f.read()
                 if old_str not in content:
                     return {"status": 400, "error": "Target string not found"}
@@ -270,7 +271,7 @@ def register_text_editor_tools(mcp: FastMCP):
             elif command == "insert":
                 if not os.path.exists(expanded_path):
                     return {"status": 404, "error": "File not found"}
-                with open(expanded_path, "r") as f:
+                with open(expanded_path) as f:
                     lines = f.readlines()
                 if insert_line is None:
                     return {"status": 400, "error": "insert_line required"}

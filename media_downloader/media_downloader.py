@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 
-import os
-import sys
-import re
 import argparse
 import logging
+import os
+import re
+import sys
+from multiprocessing import Pool
+
 import requests
 import yt_dlp
-from multiprocessing import Pool
 
 __version__ = "2.2.55"
 
@@ -29,13 +30,16 @@ class YtDlpLogger:
 
 class MediaDownloader:
     def __init__(
-        self, links: list = [], download_directory: str = None, audio: bool = False
+        self,
+        links: list = [],
+        download_directory: str | None = None,
+        audio: bool = False,
     ):
         self.links = links
         if download_directory:
             self.download_directory = download_directory
         else:
-            self.download_directory = f'{os.path.expanduser("~")}/Downloads'
+            self.download_directory = f"{os.path.expanduser('~')}/Downloads"
         self.audio = audio
         self.logger = logging.getLogger("MediaDownloader")
         self.progress_callback = None
@@ -44,7 +48,7 @@ class MediaDownloader:
         self.progress_callback = callback
 
     def open_file(self, file):
-        youtube_urls = open(file, "r")
+        youtube_urls = open(file)
         for url in youtube_urls:
             self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
