@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore", message=".*urllib3.*or charset_normalizer.*")
 
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from typing import Any
@@ -24,6 +25,8 @@ from typing import Any
 from agent_utilities.base_utilities import to_boolean
 from agent_utilities.mcp_utilities import (
     create_mcp_server,
+    ctx_log,
+    ctx_progress,
 )
 from dotenv import find_dotenv, load_dotenv
 from fastmcp import Context, FastMCP
@@ -46,6 +49,7 @@ def register_misc_tools(mcp: FastMCP):
 
 
 def register_collection_management_tools(mcp: FastMCP):
+
     @mcp.tool(
         annotations={
             "title": "Download Media",
@@ -65,18 +69,21 @@ def register_collection_management_tools(mcp: FastMCP):
         """
         Run a bash command on the local system.
         """
-        logger.debug(f"Running command: {command}")
+        ctx_log(ctx, logger, "debug", f"Running command: {command}")
         if ctx:
             await ctx.report_progress(progress=0, total=100)
         try:
+            # Use shlex.split to safely parse the command and run without shell=True
+            args = shlex.split(command)
             result = subprocess.run(
-                command, shell=True, capture_output=True, text=True, check=False
+                args, shell=False, capture_output=True, text=True, check=False
             )
             output = result.stdout
             if result.stderr:
                 output += f"\nSTDERR:\n{result.stderr}"
             if ctx:
                 await ctx.report_progress(progress=100, total=100)
+            await ctx_progress(ctx, 100, 100)
             return {
                 "status": 200 if result.returncode == 0 else 500,
                 "output": output,
@@ -96,12 +103,14 @@ def register_collection_management_tools(mcp: FastMCP):
         tags={"collection_management"},
     )
     async def download_media(
-        video_url: str = Field(description="Video URL to Download", default=None),
+        video_url: str | None = Field(
+            description="Video URL to Download", default=None
+        ),
         download_directory: str | None = Field(
             description="The directory where the media will be saved. If None, uses default directory.",
             default=os.environ.get("DOWNLOAD_DIRECTORY", None),
         ),
-        audio_only: bool | None = Field(
+        audio_only: bool = Field(
             description="Downloads only the audio",
             default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
         ),
@@ -113,8 +122,11 @@ def register_collection_management_tools(mcp: FastMCP):
         Downloads media from a given URL to the specified directory. Download as a video or audio file.
         Returns a Dictionary response with status, download directory, audio only, and other details.
         """
-        logger.debug(
-            f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}"
+        ctx_log(
+            ctx,
+            logger,
+            "debug",
+            f"Starting download for URL: {video_url}, directory: {download_directory}, audio_only: {audio_only}",
         )
 
         try:
@@ -141,15 +153,18 @@ def register_collection_management_tools(mcp: FastMCP):
             )
 
             async def progress_callback(progress, total=None):
+                await ctx_progress(ctx, 0, 100)
                 if ctx:
                     await ctx.report_progress(progress=progress, total=total)
-                    logger.debug(f"Reported progress: {progress}/{total}")
+                    ctx_log(
+                        ctx, logger, "debug", f"Reported progress: {progress}/{total}"
+                    )
 
             downloader.set_progress_callback(progress_callback)
 
             if ctx:
                 await ctx.report_progress(progress=0, total=100)
-                logger.debug("Reported initial progress: 0/100")
+                ctx_log(ctx, logger, "debug", "Reported initial progress: 0/100")
 
             file_path = downloader.download_video(link=video_url)
 
@@ -167,9 +182,9 @@ def register_collection_management_tools(mcp: FastMCP):
 
             if ctx:
                 await ctx.report_progress(progress=100, total=100)
-                logger.debug("Reported final progress: 100/100")
+                ctx_log(ctx, logger, "debug", "Reported final progress: 100/100")
 
-            logger.debug(f"Download completed, file path: {file_path}")
+            ctx_log(ctx, logger, "debug", f"Download completed, file path: {file_path}")
             return {
                 "status": 200,
                 "message": "Media downloaded successfully",
@@ -181,10 +196,14 @@ def register_collection_management_tools(mcp: FastMCP):
                 },
             }
         except Exception as e:
-            logger.error(
+            ctx_log(
+                ctx,
+                logger,
+                "error",
                 f"Failed to download media: {str(e)}\n"
-                f"Params: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}"
+                f"Params: video_url: {video_url}, download directory: {download_directory}, audio only: {audio_only}",
             )
+            await ctx_progress(ctx, 100, 100)
             return {
                 "status": 500,
                 "message": "Failed to download media",
@@ -231,7 +250,7 @@ def register_text_editor_tools(mcp: FastMCP):
         """
         View and edit files on the local filesystem.
         """
-        logger.debug(f"Text editor command: {command} on {path}")
+        ctx_log(ctx, logger, "debug", f"Text editor command: {command} on {path}")
         expanded_path = os.path.abspath(os.path.expanduser(path))
 
         try:
@@ -261,7 +280,7 @@ def register_text_editor_tools(mcp: FastMCP):
                     return {"status": 404, "error": "File not found"}
                 with open(expanded_path) as f:
                     content = f.read()
-                if old_str not in content:
+                if not old_str or old_str not in content:
                     return {"status": 400, "error": "Target string not found"}
                 new_content = content.replace(old_str, new_str or "", 1)
                 with open(expanded_path, "w") as f:
@@ -276,6 +295,8 @@ def register_text_editor_tools(mcp: FastMCP):
                 if insert_line is None:
                     return {"status": 400, "error": "insert_line required"}
                 idx = max(0, insert_line)
+                if file_text is None:
+                    return {"status": 400, "error": "file_text required"}
                 new_lines = file_text.splitlines(keepends=True)
                 if new_lines and not new_lines[-1].endswith("\n"):
                     new_lines[-1] += "\n"
@@ -336,7 +357,7 @@ def get_mcp_instance() -> tuple[Any, Any, Any, Any]:
 
     for mw in middlewares:
         mcp.add_middleware(mw)
-    registered_tags = []
+    registered_tags: list[str] = []
     return mcp, args, middlewares, registered_tags
 
 

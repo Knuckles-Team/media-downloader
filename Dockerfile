@@ -54,7 +54,7 @@ ENV HOST=${HOST} \
 
 RUN apt update \
      && apt upgrade -y \
-     && apt install ffmpeg curl make unzip -y \
+     && apt install default-jre ffmpeg curl make unzip -y \
      && curl -fsSL https://deno.land/install.sh | sh \
      && curl -LsSf https://astral.sh/uv/install.sh | sh \
      && curl -sS https://starship.rs/install.sh | sh -s -- --yes \

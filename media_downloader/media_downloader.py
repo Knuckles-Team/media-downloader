@@ -31,11 +31,11 @@ class YtDlpLogger:
 class MediaDownloader:
     def __init__(
         self,
-        links: list = [],
+        links: list | None = None,
         download_directory: str | None = None,
         audio: bool = False,
     ):
-        self.links = links
+        self.links = links if links is not None else []
         if download_directory:
             self.download_directory = download_directory
         else:
@@ -58,7 +58,7 @@ class MediaDownloader:
         outtmpl = f"{self.download_directory}/%(uploader)s - %(title)s.%(ext)s"
         if "rumble.com" in link:
             self.logger.debug(f"Processing Rumble URL: {link}")
-            rumble_url = requests.get(link)
+            rumble_url = requests.get(link, timeout=10)
             for rumble_embedded_url in rumble_url.text.split(","):
                 if "embedUrl" in rumble_embedded_url:
                     rumble_embedded_url = re.sub(
@@ -78,7 +78,7 @@ class MediaDownloader:
         }
         if self.audio:
             ydl_opts["postprocessors"] = [
-                {
+                {  # type: ignore
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "mp3",
                     "preferredquality": "320",
@@ -108,7 +108,7 @@ class MediaDownloader:
         while attempts < 3:
             url = f"https://www.youtube.com/user/{username}/videos"
             self.logger.debug(f"Trying URL: {url}")
-            page = requests.get(url).content
+            page = requests.get(url, timeout=10).content
             data = str(page).split(" ")
             item = 'href="/watch?'
             vids = [
@@ -125,18 +125,20 @@ class MediaDownloader:
             else:
                 url = f"https://www.youtube.com/c/{channel}/videos"
                 self.logger.debug(f"Trying URL: {url}")
-                page = requests.get(url).content
+                page = requests.get(url, timeout=10).content
                 data = str(page).split(" ")
                 item = "https://i.ytimg.com/vi/"
                 vids = []
                 for line in data:
                     if item in line:
                         try:
-                            found = re.search(
+                            match = re.search(
                                 "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
-                            ).group(1)
-                            vid = f"https://www.youtube.com/watch?v={found}"
-                            vids.append(vid)
+                            )
+                            if match:
+                                found = match.group(1)
+                                vid = f"https://www.youtube.com/watch?v={found}"
+                                vids.append(vid)
                         except AttributeError:
                             continue
                 if vids:

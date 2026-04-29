@@ -1,7 +1,22 @@
-#!/usr/bin/python
-
-import subprocess
 import json
+import subprocess
+
+import pytest
+
+
+@pytest.fixture
+def video_url():
+    return "https://www.youtube.com/watch?v=Tkv_guk57i0"
+
+
+@pytest.fixture
+def download_directory():
+    return "./downloads"
+
+
+@pytest.fixture
+def audio_only():
+    return False
 
 
 def test_server(
