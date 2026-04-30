@@ -11,7 +11,7 @@ from multiprocessing import Pool
 import requests
 import yt_dlp
 
-__version__ = "2.2.57"
+__version__ = "2.3.0"
 
 
 class YtDlpLogger:
