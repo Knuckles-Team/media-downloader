@@ -35,7 +35,7 @@ from pydantic import Field
 
 from media_downloader.media_downloader import MediaDownloader
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
