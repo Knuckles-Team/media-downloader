@@ -21,7 +21,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.6.0*
+*Version: 2.7.0*
 
 ## Overview
 
@@ -330,3 +330,64 @@ uv pip install --upgrade media-downloader
 
 ![GitHub followers](https://img.shields.io/github/followers/Knucklessg1)
 ![GitHub User's stars](https://img.shields.io/github/stars/Knucklessg1)
+
+
+## MCP Configuration Examples
+
+### 1. Standard IO (stdio) Deployment
+
+```json
+{
+  "mcpServers": {
+    "media-downloader": {
+      "command": "uv",
+      "args": [
+        "run",
+        "media-downloader-mcp"
+      ],
+      "env": {
+        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
+        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
+        "AUDIO_ONLY": "<YOUR_AUDIO_ONLY>",
+        "COLLECTION_MANAGEMENTTOOL": "True",
+        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>",
+        "DOWNLOAD_DIRECTORY": "<YOUR_DOWNLOAD_DIRECTORY>",
+        "MISCTOOL": "True",
+        "TEXT_EDITORTOOL": "True"
+      }
+    }
+  }
+}
+```
+
+### 2. Streamable HTTP (SSE) Deployment
+
+```json
+{
+  "mcpServers": {
+    "media-downloader": {
+      "command": "uv",
+      "args": [
+        "run",
+        "media-downloader-mcp",
+        "--transport",
+        "http",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "env": {
+        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
+        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
+        "AUDIO_ONLY": "<YOUR_AUDIO_ONLY>",
+        "COLLECTION_MANAGEMENTTOOL": "True",
+        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>",
+        "DOWNLOAD_DIRECTORY": "<YOUR_DOWNLOAD_DIRECTORY>",
+        "MISCTOOL": "True",
+        "TEXT_EDITORTOOL": "True"
+      }
+    }
+  }
+}
+```

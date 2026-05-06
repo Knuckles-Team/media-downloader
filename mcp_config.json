@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "media-downloader": {
+      "command": "uv",
+      "args": [
+        "run",
+        "media-downloader-mcp"
+      ],
+      "env": {
+        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
+        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
+        "AUDIO_ONLY": "<YOUR_AUDIO_ONLY>",
+        "COLLECTION_MANAGEMENTTOOL": "True",
+        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>",
+        "DOWNLOAD_DIRECTORY": "<YOUR_DOWNLOAD_DIRECTORY>",
+        "MISCTOOL": "True",
+        "TEXT_EDITORTOOL": "True"
+      }
+    }
+  }
+}
