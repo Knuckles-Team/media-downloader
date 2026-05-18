@@ -1,0 +1,152 @@
+{
+  "feature_id": "code-enhancement-20260512",
+  "title": "Code Enhancement: media-downloader",
+  "created": "2026-05-12T14:14:41.007208+00:00",
+  "overview": "Automated code enhancement review for media-downloader. Covers 17 analysis domains.",
+  "user_stories": [
+    {
+      "role": "developer",
+      "action": "address Project Analysis findings (grade: C, score: 74)",
+      "value": "improve project project analysis from C to at least B (80+)"
+    },
+    {
+      "role": "developer",
+      "action": "address Test Coverage findings (grade: D, score: 65)",
+      "value": "improve project test coverage from D to at least B (80+)"
+    },
+    {
+      "role": "developer",
+      "action": "address Concept Traceability findings (grade: F, score: 51)",
+      "value": "improve project concept traceability from F to at least B (80+)"
+    },
+    {
+      "role": "developer",
+      "action": "address Changelog Audit findings (grade: C, score: 75)",
+      "value": "improve project changelog audit from C to at least B (80+)"
+    },
+    {
+      "role": "developer",
+      "action": "address Environment Variables findings (grade: C, score: 75)",
+      "value": "improve project environment variables from C to at least B (80+)"
+    }
+  ],
+  "functional_requirements": [
+    {
+      "id": "FR-001",
+      "description": "Low test-to-source ratio: 0.25",
+      "testable": true
+    },
+    {
+      "id": "FR-002",
+      "description": "18 potential doc-test drift items",
+      "testable": true
+    },
+    {
+      "id": "FR-003",
+      "description": "README.md missing sections: installation",
+      "testable": true
+    },
+    {
+      "id": "FR-004",
+      "description": "README missing: MCP tools mapping table with descriptions",
+      "testable": true
+    },
+    {
+      "id": "FR-005",
+      "description": "README missing: Has a Table of Contents",
+      "testable": true
+    },
+    {
+      "id": "FR-006",
+      "description": "README missing: References /docs directory material",
+      "testable": true
+    },
+    {
+      "id": "FR-007",
+      "description": "README missing: Has MCP tools mapping table with descriptions",
+      "testable": true
+    },
+    {
+      "id": "FR-008",
+      "description": "No discernible layer architecture (no domain/service/adapter separation)",
+      "testable": true
+    },
+    {
+      "id": "FR-009",
+      "description": "Low traceability ratio: 0% concepts fully traced",
+      "testable": true
+    },
+    {
+      "id": "FR-010",
+      "description": "2 test functions missing concept markers",
+      "testable": true
+    },
+    {
+      "id": "FR-011",
+      "description": "Total lint findings: 3 (high/error: 3, medium/warning: 0, low: 0)",
+      "testable": true
+    },
+    {
+      "id": "FR-012",
+      "description": "2 hook(s) may be outdated: ruff-pre-commit, uv-pre-commit",
+      "testable": true
+    },
+    {
+      "id": "FR-013",
+      "description": "1 rogue/throwaway scripts detected (fix_*, validate_*, patch_*, etc.): scripts/validate_a2a_agent.py",
+      "testable": true
+    },
+    {
+      "id": "FR-014",
+      "description": "CHANGELOG.md exists but could not be parsed \u2014 check format compliance",
+      "testable": true
+    },
+    {
+      "id": "FR-015",
+      "description": "No changelog entries within the last 30 days",
+      "testable": true
+    },
+    {
+      "id": "FR-016",
+      "description": "keepachangelog not installed \u2014 pip install 'universal-skills[code-enhancer]'",
+      "testable": true
+    },
+    {
+      "id": "FR-017",
+      "description": "1 tests have no assertions",
+      "testable": true
+    },
+    {
+      "id": "FR-018",
+      "description": "Partial env var documentation: 53% coverage",
+      "testable": true
+    },
+    {
+      "id": "FR-019",
+      "description": "Undocumented env vars: BREW_INSTALL_CMD, EUNOMIA_REMOTE_URL, OAUTH_BASE_URL, OAUTH_UPSTREAM_AUTH_ENDPOINT, OAUTH_UPSTREAM_CLIENT_ID, OAUTH_UPSTREAM_CLIENT_SECRET, OAUTH_UPSTREAM_TOKEN_ENDPOINT, PATH, REMOTE_AUTH_SERVERS, REMOTE_BASE_URL",
+      "testable": true
+    },
+    {
+      "id": "FR-020",
+      "description": "5 Python env vars not in .env.example: AUDIO_ONLY, COLLECTION_MANAGEMENTTOOL, DOWNLOAD_DIRECTORY, MISCTOOL, TEXT_EDITORTOOL",
+      "testable": true
+    }
+  ],
+  "success_criteria": [
+    {
+      "metric": "Overall GPA",
+      "current": 2.94,
+      "target": 3.0
+    },
+    {
+      "metric": "Domains at B or above",
+      "current": 12,
+      "target": 17
+    },
+    {
+      "metric": "Actionable findings",
+      "current": 20,
+      "target": 0
+    }
+  ]
+}

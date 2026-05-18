@@ -104,15 +104,15 @@ def register_collection_management_tools(mcp: FastMCP):
     )
     async def download_media(
         video_url: str | None = Field(
-            description="Video URL to Download", default=None
+            default=None, description="Video URL to Download"
         ),
         download_directory: str | None = Field(
-            description="The directory where the media will be saved. If None, uses default directory.",
             default=os.environ.get("DOWNLOAD_DIRECTORY", None),
+            description="The directory where the media will be saved. If None, uses default directory.",
         ),
         audio_only: bool = Field(
-            description="Downloads only the audio",
             default=to_boolean(os.environ.get("AUDIO_ONLY", False)),
+            description="Downloads only the audio",
         ),
         ctx: Context = Field(
             description="MCP context for progress reporting.", default=None
@@ -233,15 +233,15 @@ def register_text_editor_tools(mcp: FastMCP):
         ),
         path: str = Field(description="Path to the file"),
         file_text: str | None = Field(
-            description="Content to write or insert", default=None
+            default=None, description="Content to write or insert"
         ),
         view_range: list[int] | None = Field(
-            description="Line range to view [start, end]", default=None
+            default=None, description="Line range to view [start, end]"
         ),
-        old_str: str | None = Field(description="String to replace", default=None),
-        new_str: str | None = Field(description="Replacement string", default=None),
+        old_str: str | None = Field(default=None, description="String to replace"),
+        new_str: str | None = Field(default=None, description="Replacement string"),
         insert_line: int | None = Field(
-            description="Line number to insert at", default=None
+            default=None, description="Line number to insert at"
         ),
         ctx: Context = Field(
             description="MCP context for progress reporting.", default=None

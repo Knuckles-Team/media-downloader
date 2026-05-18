@@ -3,8 +3,8 @@ services:
   media-downloader-mcp:
     image: docker.io/knucklessg1/media-downloader:latest
     #    build:
-    #      context: . # Debug
-    #      dockerfile: debug.Dockerfile
+    #      context: .. # Debug
+    #      dockerfile: docker/debug.Dockerfile
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
     command: [ "media-downloader-mcp" ]
@@ -25,7 +25,7 @@ services:
       - "DOWNLOAD_DIRECTORY=/downloads"
       - "AUDIO_ONLY=false"
     volumes:
-      - ./mcp/downloads:/downloads:rw
+      - ../mcp/downloads:/downloads:rw
     ports:
       - "8000:8000"
     healthcheck:
@@ -38,8 +38,8 @@ services:
   media-downloader-agent:
     image: docker.io/knucklessg1/media-downloader:latest
     #    build:
-    #      context: . # Debug
-    #      dockerfile: debug.Dockerfile
+    #      context: .. # Debug
+    #      dockerfile: docker/debug.Dockerfile
     container_name: media-downloader-agent
     hostname: media-downloader-agent
     command: [ "media-downloader-agent" ]
@@ -54,7 +54,7 @@ services:
         max-file: "3"
     restart: always
     env_file:
-      - .env
+      - ../.env
 
     environment:
       - "PYTHONUNBUFFERED=1"
