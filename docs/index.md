@@ -346,11 +346,8 @@ uv pip install --upgrade media-downloader
         "media-downloader-mcp"
       ],
       "env": {
-        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
-        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
         "AUDIO_ONLY": "<YOUR_AUDIO_ONLY>",
         "COLLECTION_MANAGEMENTTOOL": "True",
-        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>",
         "DOWNLOAD_DIRECTORY": "<YOUR_DOWNLOAD_DIRECTORY>",
         "MISCTOOL": "True",
         "TEXT_EDITORTOOL": "True"
@@ -378,11 +375,8 @@ uv pip install --upgrade media-downloader
         "8000"
       ],
       "env": {
-        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
-        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
         "AUDIO_ONLY": "<YOUR_AUDIO_ONLY>",
         "COLLECTION_MANAGEMENTTOOL": "True",
-        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>",
         "DOWNLOAD_DIRECTORY": "<YOUR_DOWNLOAD_DIRECTORY>",
         "MISCTOOL": "True",
         "TEXT_EDITORTOOL": "True"

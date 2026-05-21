@@ -7,12 +7,12 @@ import warnings
 from agent_utilities import (
     build_system_prompt_from_workspace,
     create_agent_parser,
-    create_graph_agent_server,
+    create_agent_server,
     initialize_workspace,
     load_identity,
 )
 
-__version__ = "2.12.0"
+__version__ = "2.12.1"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,7 +53,7 @@ def agent_server():
         logger.debug("Debug mode enabled")
 
     # Start server using the auto-discovery pattern (from mcp_config.json)
-    create_graph_agent_server(
+    create_agent_server(
         mcp_url=args.mcp_url,
         mcp_config=args.mcp_config or "mcp_config.json",
         host=args.host,
