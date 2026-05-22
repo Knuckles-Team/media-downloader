@@ -82,31 +82,7 @@ Configure your IDE's `mcp.json` to launch the MCP server via `uvx`:
 ```
 
 #### Streamable-HTTP Transport (Recommended for production deployments)
-Configure your client's `mcp.json` to launch the Streamable-HTTP server via `uvx` with explicit host and port definition:
-
-```json
-{
-  "mcpServers": {
-    "media-downloader": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "media-downloader",
-        "media-downloader-mcp"
-      ],
-      "env": {
-        "TRANSPORT": "streamable-http",
-        "HOST": "0.0.0.0",
-        "PORT": "8000",
-        "YT_DLP_PATH": "your_yt_dlp_path_here",
-        "BREW_INSTALL_CMD": "your_brew_install_cmd_here"
-      }
-    }
-  }
-}
-```
-
-Alternatively, connect to a pre-deployed remote or local Streamable-HTTP instance:
+To run the server as a long-running Streamable-HTTP service:
 
 ```json
 {
