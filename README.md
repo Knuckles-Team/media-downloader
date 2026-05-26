@@ -45,7 +45,7 @@ Host an MCP Server for Agentic AI to download videos!.
 This agent wraps the Download audio/videos from the internet!
 Host an MCP Server for Agentic AI to download videos! API. You can interact with it programmatically or via its integrated execution entrypoints.
 
-Detailed instructions on how to use the underlying API wrappers, extended schema bindings, and developer SDK references are maintained in [docs/index.md](file:///home/apps/workspace/agent-packages/agents/media-downloader/docs/index.md).
+Detailed instructions on how to use the underlying API wrappers, extended schema bindings, and developer SDK references are maintained in [docs/index.md](docs/index.md).
 
 ---
 
@@ -55,7 +55,28 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 
 ### Available MCP Tools
 
-Detailed tool schemas, parameter shapes, and validation constraints are preserved in [docs/mcp.md](file:///home/apps/workspace/agent-packages/agents/media-downloader/docs/mcp.md).
+Detailed tool schemas, parameter shapes, and validation constraints are preserved in [docs/mcp.md](docs/mcp.md).
+
+### Dynamic Tool Selection & Visibility
+
+This MCP server supports dynamic toolset selection and visibility filtering at runtime. This allows you to restrict the set of exposed tools in order to prevent blowing up the LLM's context window.
+
+You can configure tool filtering via multiple input channels:
+
+- **CLI Arguments:** Pass `--tools` or `--toolsets` (or their disabled counterparts `--disabled-tools` and `--disabled-toolsets`) during startup.
+- **Environment Variables:** Define standard environment variables:
+  - `MCP_ENABLED_TOOLS` / `MCP_DISABLED_TOOLS`
+  - `MCP_ENABLED_TAGS` / `MCP_DISABLED_TAGS`
+- **HTTP SSE Request Headers:** Pass custom headers during transport initialization:
+  - `x-mcp-enabled-tools` / `x-mcp-disabled-tools`
+  - `x-mcp-enabled-tags` / `x-mcp-disabled-tags`
+- **HTTP SSE Request Query Parameters:** Append query parameters directly to your transport connection URL:
+  - `?tools=tool1,tool2`
+  - `?tags=tag1`
+
+When query strings or parameters are supplied, an LLM-free **Knowledge Graph resolution layer** (using `DynamicToolOrchestrator`) matches query intents against known tool tags, names, or descriptions, with safe fallback and automated 24-hour background cache refreshing.
+
+---
 
 ### MCP Configuration Examples
 
@@ -217,7 +238,7 @@ services:
 
 ```
 
-Detailed graph node architecture explanations, custom skill configurations, and agentic trace guides are available in [docs/agent.md](file:///home/apps/workspace/agent-packages/agents/media-downloader/docs/agent.md).
+Detailed graph node architecture explanations, custom skill configurations, and agentic trace guides are available in [docs/agent.md](docs/agent.md).
 
 ---
 

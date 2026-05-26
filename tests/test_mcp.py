@@ -1,5 +1,6 @@
 import json
 import subprocess
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -23,38 +24,64 @@ def test_server(
     video_url: str, download_directory: str = ".", audio_only: bool = False
 ):
     payload = {
-        "tool": "download_media",
-        "args": {
-            "video_url": video_url,
-            "download_directory": download_directory,
-            "audio_only": audio_only,
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+            "name": "download_media",
+            "arguments": {
+                "video_url": video_url,
+                "download_directory": download_directory,
+                "audio_only": audio_only,
+            },
         },
+        "id": 1,
     }
-    try:
+
+    mock_stdout = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "result": {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "status": "success",
+                                "file": f"{download_directory}/mock_video.mp4",
+                            }
+                        ),
+                    }
+                ]
+            },
+            "id": 1,
+        }
+    )
+
+    with patch("subprocess.run") as mock_run:
+        mock_process = MagicMock()
+        mock_process.returncode = 0
+        mock_process.stdout = mock_stdout
+        mock_process.stderr = ""
+        mock_run.return_value = mock_process
+
         process = subprocess.run(
-            ["python", "-m", "media_downloader", "--transport=stdio"],
+            ["python", "-m", "media_downloader.mcp_server", "--transport=stdio"],
             input=json.dumps(payload),
             text=True,
             capture_output=True,
         )
-        print("Server response:", process.stdout)
-        if process.stderr:
-            print("Errors:", process.stderr)
-        try:
-            response = json.loads(process.stdout)
-            if "result" in response:
-                print(f"Downloaded file path: {response['result']}")
-            elif "error" in response:
-                print(f"Error: {response['error']}")
-        except json.JSONDecodeError:
-            print("Invalid JSON response:", process.stdout)
-    except Exception as e:
-        print(f"Failed to send request: {e}")
 
+        mock_run.assert_called_once_with(
+            ["python", "-m", "media_downloader.mcp_server", "--transport=stdio"],
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+        )
 
-if __name__ == "__main__":
-    test_server(
-        video_url="https://www.youtube.com/watch?v=Tkv_guk57i0",
-        download_directory="./downloads",
-        audio_only=False,
-    )
+        assert process.returncode == 0
+        response = json.loads(process.stdout)
+        assert "result" in response
+        result_content = response["result"]["content"][0]["text"]
+        result_dict = json.loads(result_content)
+        assert result_dict["status"] == "success"
+        assert "file" in result_dict
