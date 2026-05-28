@@ -32,10 +32,11 @@ from fastmcp import Context, FastMCP
 from fastmcp.utilities.logging import get_logger
 from pydantic import Field
 
-__version__ = "2.15.0"
+__version__ = "2.16.0"
 
 logger = get_logger("MediaDownloaderMCPServer")
 logger.setLevel(logging.INFO)
+
 
 def register_prompts(mcp: FastMCP):
     @mcp.prompt
@@ -47,6 +48,7 @@ def register_prompts(mcp: FastMCP):
     def download_audio(audio_url: str) -> str:
         """Generates a prompt for downloading audio."""
         return f"Download the following media as audio only: {audio_url}."
+
 
 def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
     """Initialize and return the MCP instance, args, and middlewares."""
@@ -105,6 +107,7 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
     registered_tags: list[str] = []
     return mcp, args, middlewares, registered_tags
 
+
 def mcp_server() -> None:
     mcp, args, middlewares, registered_tags = get_mcp_instance()
     print(f"{'media-downloader'} MCP v{__version__}", file=sys.stderr)
@@ -122,6 +125,7 @@ def mcp_server() -> None:
     else:
         logger.error("Invalid transport", extra={"transport": args.transport})
         sys.exit(1)
+
 
 if __name__ == "__main__":
     mcp_server()

@@ -96,6 +96,8 @@ class MockYoutubeDL:
         pass
 
     def extract_info(self, url, download=True, **kwargs):
+        if not download and kwargs:
+            pass
         if "fail_always" in url:
             raise Exception("Simulated permanent download error")
         if "fail_first" in url and "%(id)s" not in self.opts.get("outtmpl", ""):
@@ -129,8 +131,8 @@ def mock_requests_get(url, *args, **_kwargs):
 
 
 class MockPool:
-    def __init__(self, _processes=None):
-        pass
+    def __init__(self, processes=None, **kwargs):
+        self.processes = processes
 
     def map(self, func, iterable):
         return [func(x) for x in iterable]
@@ -667,12 +669,12 @@ def test_agent_server_main_block():
     # Runs the main block of agent_server.py (line 80) without locking the database or hitting workspace loading
     with (
         patch("sys.argv", ["media_downloader"]),
-        patch("media_downloader.agent_server.initialize_workspace") as mock_init,
-        patch("media_downloader.agent_server.load_identity") as mock_load,
+        patch("agent_utilities.initialize_workspace") as mock_init,
+        patch("agent_utilities.load_identity") as mock_load,
         patch(
-            "media_downloader.agent_server.build_system_prompt_from_workspace"
+            "agent_utilities.build_system_prompt_from_workspace"
         ) as mock_build,
-        patch("media_downloader.agent_server.create_agent_server") as mock_create,
+        patch("agent_utilities.create_agent_server") as mock_create,
     ):
         mock_load.return_value = {
             "name": "Agent",
@@ -684,7 +686,7 @@ def test_agent_server_main_block():
 
 
 def test_mcp_server_main_block():
-    # Runs the main block of mcp_server.py (line 132) by stubbing out get_mcp_instance to avoid any DB registration / FastMCP setup
+    # Runs the main block of mcp_server.py (line 132) by stubbing out create_mcp_server in agent_utilities
     mock_mcp = MagicMock()
     mock_args = MagicMock()
     mock_args.transport = "stdio"
@@ -692,8 +694,8 @@ def test_mcp_server_main_block():
     with (
         patch("sys.argv", ["media_downloader"]),
         patch(
-            "media_downloader.mcp_server.get_mcp_instance",
-            return_value=(mock_mcp, mock_args, [], []),
+            "agent_utilities.mcp_utilities.create_mcp_server",
+            return_value=(mock_args, mock_mcp, []),
         ),
     ):
         runpy.run_module("media_downloader.mcp_server", run_name="__main__")

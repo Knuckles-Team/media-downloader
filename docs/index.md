@@ -249,7 +249,7 @@ services:
       - DOWNLOAD_DIRECTORY=/downloads
       - AUDIO_ONLY=false
     volumes:
-      - "/home/genius/Downloads:/downloads"
+      - "/home/user/Downloads:/downloads"
     ports:
       - 8004:8004
 ```
