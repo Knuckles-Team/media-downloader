@@ -671,9 +671,7 @@ def test_agent_server_main_block():
         patch("sys.argv", ["media_downloader"]),
         patch("agent_utilities.initialize_workspace") as mock_init,
         patch("agent_utilities.load_identity") as mock_load,
-        patch(
-            "agent_utilities.build_system_prompt_from_workspace"
-        ) as mock_build,
+        patch("agent_utilities.build_system_prompt_from_workspace") as mock_build,
         patch("agent_utilities.create_agent_server") as mock_create,
     ):
         mock_load.return_value = {
