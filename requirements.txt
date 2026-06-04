@@ -1,2 +1,2 @@
-agent-utilities>=0.40.0
+agent-utilities>=0.41.0
 yt-dlp[default]>=2025.12.08
