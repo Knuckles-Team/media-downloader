@@ -22,6 +22,10 @@
 
 *Version: 2.29.0*
 
+> **Documentation** — Installation, deployment, and usage across the CLI, Python API,
+> MCP, and A2A agent interfaces are maintained in the
+> [official documentation](https://knuckles-team.github.io/media-downloader/).
+
 ---
 
 ## Overview
@@ -271,6 +275,24 @@ uv pip install media-downloader[all]
 # Using standard pip
 python -m pip install media-downloader[all]
 ```
+
+---
+
+## Documentation
+
+The complete documentation is published as the
+[official documentation site](https://knuckles-team.github.io/media-downloader/) and is
+the recommended reference for installation, deployment, and day-to-day operation.
+
+| Page | Contents |
+|---|---|
+| [Installation](https://knuckles-team.github.io/media-downloader/installation/) | pip, source, extras, prebuilt Docker image |
+| [Deployment](https://knuckles-team.github.io/media-downloader/deployment/) | run the MCP server, the agent server, Compose, Caddy + Technitium, env config |
+| [Usage](https://knuckles-team.github.io/media-downloader/usage/) | the MCP tools, the `MediaDownloader` Python API, the CLI |
+| [Overview](https://knuckles-team.github.io/media-downloader/overview/) | ecosystem role, enterprise readiness, architecture |
+| [Concepts](https://knuckles-team.github.io/media-downloader/concepts/) | concept registry (`CONCEPT:MDLD-*`) |
+
+`AGENTS.md` is the canonical contributor/agent guidance.
 
 ---
 
