@@ -9,7 +9,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_HTTP_TIMEOUT=3600
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --upgrade --break-system-packages --prerelease=allow media-downloader[all]>=2.29.0
+    uv pip install --system --upgrade --break-system-packages --prerelease=allow media-downloader[all]>=2.30.0
 
 FROM python:3.11-slim
 
