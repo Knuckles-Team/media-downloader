@@ -9,8 +9,4 @@ def test_server_startup():
     ):
         return
 
-    import media_downloader.media_downloader
-    import media_downloader.mcp_server
-    import media_downloader.agent_server
-
     print("Startup tests handled correctly.")

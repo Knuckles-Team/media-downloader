@@ -1,11 +1,8 @@
 import argparse
-import json
-import logging
-import os
-import sys
-import re
-import runpy
 import importlib
+import os
+import runpy
+import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -13,15 +10,13 @@ from fastmcp import Context, FastMCP
 
 # Import under an alias to avoid name conflict with the CLI function media_downloader
 import media_downloader as md_package
-
+from media_downloader.agent_server import agent_server
+from media_downloader.mcp_server import get_mcp_instance, mcp_server
 from media_downloader.media_downloader import (
     MediaDownloader,
     YtDlpLogger,
     media_downloader,
 )
-from media_downloader.mcp_server import get_mcp_instance, mcp_server
-from media_downloader.agent_server import agent_server
-
 
 # =====================================================================
 # Global Auto-use Mocks for database-independent fast execution
@@ -59,15 +54,15 @@ def mock_agent_utilities_and_mcp():
             "agent_utilities.mcp_utilities.create_mcp_server",
             return_value=(mock_args, local_mcp, []),
         ) as mock_create_mcp,
-        patch("agent_utilities.initialize_workspace") as mock_init_ws,
+        patch("agent_utilities.initialize_workspace"),
         patch(
             "agent_utilities.load_identity",
             return_value={"name": "Agent", "description": "Desc", "content": "Prompt"},
-        ) as mock_load_id,
+        ),
         patch(
             "agent_utilities.build_system_prompt_from_workspace",
             return_value="System Prompt",
-        ) as mock_build_sp,
+        ),
         patch(
             "media_downloader.agent_server.create_agent_server"
         ) as mock_create_agent_server,
@@ -659,7 +654,6 @@ def test_getattr_non_exposed_member():
 
 def test_requests_dependency_warning_import_error():
     # Patches sys.modules["requests.exceptions"] to trigger the except ImportError branch (lines 10-11) of mcp_server.py
-    import sys
 
     with patch.dict(sys.modules, {"requests.exceptions": None}):
         importlib.reload(sys.modules["media_downloader.mcp_server"])
@@ -669,9 +663,9 @@ def test_agent_server_main_block():
     # Runs the main block of agent_server.py (line 80) without locking the database or hitting workspace loading
     with (
         patch("sys.argv", ["media_downloader"]),
-        patch("agent_utilities.initialize_workspace") as mock_init,
+        patch("agent_utilities.initialize_workspace"),
         patch("agent_utilities.load_identity") as mock_load,
-        patch("agent_utilities.build_system_prompt_from_workspace") as mock_build,
+        patch("agent_utilities.build_system_prompt_from_workspace"),
         patch("agent_utilities.create_agent_server") as mock_create,
     ):
         mock_load.return_value = {

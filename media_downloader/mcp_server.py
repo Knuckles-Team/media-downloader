@@ -27,15 +27,23 @@ from typing import Any
 from agent_utilities.mcp_utilities import (
     create_mcp_server,
     load_config,
+    register_tool_surface,
 )
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.logging import get_logger
 from pydantic import Field
 
+from media_downloader.media_downloader import MediaDownloader
+
 __version__ = "2.34.0"
 
 logger = get_logger("MediaDownloaderMCPServer")
 logger.setLevel(logging.INFO)
+
+
+def get_client() -> MediaDownloader:
+    """Return a lightweight MediaDownloader client for the tool surface."""
+    return MediaDownloader(links=[])
 
 
 def register_prompts(mcp: FastMCP):
@@ -100,11 +108,18 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
             logger.error(f"Download error: {e}")
             return {"status": "error", "message": str(e)}
 
+    registered_tags = register_tool_surface(
+        mcp,
+        client_cls=MediaDownloader,
+        get_client=get_client,
+        service="media-downloader",
+        tools_module=sys.modules[__name__],
+    )
+
     register_prompts(mcp)
 
     for mw in middlewares:
         mcp.add_middleware(mw)
-    registered_tags: list[str] = []
     return mcp, args, middlewares, registered_tags
 
 
