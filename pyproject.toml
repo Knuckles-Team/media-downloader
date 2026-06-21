@@ -29,6 +29,12 @@ media-downloader = "media_downloader.media_downloader:main"
 media-downloader-mcp = "media_downloader.mcp_server:mcp_server"
 media-downloader-agent = "media_downloader.agent_server:agent_server"
 
+[project.entry-points."agent_utilities.skill_providers"]
+modular-contrib = "media_downloader.skills"
+
+[project.entry-points."agent_utilities.prompt_providers"]
+modular-contrib = "media_downloader.prompts"
+
 [tool.setuptools]
 include-package-data = true
 
@@ -47,7 +53,7 @@ dev = [
 ]
 
 [tool.setuptools.package-data]
-media_downloader = [ "mcp_config.json", "agent_data/**",]
+media_downloader = [ "mcp_config.json", "agent_data/**", "prompts/**", "skills/**",]
 
 [tool.ruff.lint]
 select = [ "E", "F", "I", "UP", "B",]
