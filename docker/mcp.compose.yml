@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   media-downloader-mcp:
-    image: knucklessg1/media-downloader:latest
+    image: knucklessg1/media-downloader:mcp
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
     restart: always
