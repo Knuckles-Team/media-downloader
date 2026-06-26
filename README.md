@@ -63,11 +63,29 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 
 <!-- MCP-TOOLS-TABLE:START -->
 
+#### Condensed action-routed tools (default — `MCP_TOOL_MODE=condensed`)
+
 | MCP Tool | Toggle Env Var | Description |
 |----------|----------------|-------------|
 | `download_media` | — | Download video or audio from supported sites (YouTube, Rumble, etc.). |
 
-_1 action-routed tools (default `MCP_TOOL_MODE=condensed`). Each is enabled unless its toggle is set false; set `MCP_TOOL_MODE=verbose` (or `both`) for the 1:1 per-operation surface. Auto-generated — do not edit._
+#### Verbose 1:1 API-mapped tools (`MCP_TOOL_MODE=verbose` or `both`)
+
+<details>
+<summary>6 per-operation tools — one per public API method (click to expand)</summary>
+
+| MCP Tool | Toggle Env Var | Description |
+|----------|----------------|-------------|
+| `media_downloader_download_all` | `MEDIA_DOWNLOADERTOOL` | Invoke the download_all operation. |
+| `media_downloader_download_video` | `MEDIA_DOWNLOADERTOOL` | Invoke the download_video operation. |
+| `media_downloader_get_channel_videos` | `MEDIA_DOWNLOADERTOOL` | Invoke the get_channel_videos operation. |
+| `media_downloader_open_file` | `MEDIA_DOWNLOADERTOOL` | Invoke the open_file operation. |
+| `media_downloader_progress_hook` | `MEDIA_DOWNLOADERTOOL` | Invoke the progress_hook operation. |
+| `media_downloader_set_progress_callback` | `MEDIA_DOWNLOADERTOOL` | Invoke the set_progress_callback operation. |
+
+</details>
+
+_1 action-routed tool(s) (default) · 6 verbose 1:1 tool(s). Each is enabled unless its `<DOMAIN>TOOL` toggle is set false; `MCP_TOOL_MODE` selects the surface (`condensed` default · `verbose` 1:1 · `both`). Auto-generated — do not edit._
 <!-- MCP-TOOLS-TABLE:END -->
 
 Detailed tool schemas, parameter shapes, and validation constraints are preserved in [docs/mcp.md](docs/mcp.md).
@@ -117,8 +135,7 @@ Configure your IDE's `mcp.json` to launch the MCP server via `uvx`:
         "media-downloader-mcp"
       ],
       "env": {
-        "YT_DLP_PATH": "your_yt_dlp_path_here",
-        "BREW_INSTALL_CMD": "your_brew_install_cmd_here"
+        "TRANSPORT": "stdio"
       }
     }
   }
@@ -141,9 +158,7 @@ Configure your client's `mcp.json` to launch the Streamable-HTTP server via `uvx
       "env": {
         "TRANSPORT": "streamable-http",
         "HOST": "0.0.0.0",
-        "PORT": "8000",
-        "YT_DLP_PATH": "your_yt_dlp_path_here",
-        "BREW_INSTALL_CMD": "your_brew_install_cmd_here"
+        "PORT": "8000"
       }
     }
   }
@@ -170,8 +185,6 @@ docker run -d \
   -p 8000:8000 \
   -e TRANSPORT=streamable-http \
   -e PORT=8000 \
-  -e YT_DLP_PATH="your_value" \
-  -e BREW_INSTALL_CMD="your_value" \
   knucklessg1/media-downloader:mcp
 ```
 
@@ -207,10 +220,6 @@ This repository features a fully integrated Pydantic AI Graph Agent. It communic
 To start the interactive command-line agent:
 
 ```bash
-# Set credentials
-export YT_DLP_PATH="your_value"
-export BREW_INSTALL_CMD="your_value"
-
 # Run the agent server
 media-downloader-agent --provider openai --model-id gpt-4o
 ```
@@ -324,8 +333,6 @@ Built directly upon the enterprise-ready [`agent-utilities`](https://github.com/
 | `EUNOMIA_TYPE` | `none` | options: none, embedded, remote |
 | `EUNOMIA_POLICY_FILE` | `mcp_policies.json` |  |
 | `EUNOMIA_REMOTE_URL` | `http://eunomia-server:8000` |  |
-| `YT_DLP_PATH` | `/usr/bin/yt-dlp` |  |
-| `BREW_INSTALL_CMD` | `brew install yt-dlp` |  |
 
 #### Inherited agent-utilities variables (apply to every connector)
 
@@ -346,18 +353,12 @@ Built directly upon the enterprise-ready [`agent-utilities`](https://github.com/
 | `MODEL_ID` | `gpt-4o` | Model id for the agent |
 | `ENABLE_WEB_UI` | `True` | Serve the AG-UI web interface |
 
-_13 package + 14 inherited variable(s). Auto-generated from `.env.example` + the shared agent-utilities set — do not edit._
+_11 package + 14 inherited variable(s). Auto-generated from `.env.example` + the shared agent-utilities set — do not edit._
 <!-- ENV-VARS-TABLE:END -->
 
 
 Every variable the server reads. A local template is supplied inside
 [.env.example](.env.example) — copy it to `.env` and adjust as needed.
-
-### Core
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `YT_DLP_PATH` | Path to the `yt-dlp` binary | `/usr/bin/yt-dlp` |
-| `BREW_INSTALL_CMD` | Homebrew command used to (re)install `yt-dlp` if missing | `brew install yt-dlp` |
 
 ### MCP server / transport
 | Variable | Description | Default |
