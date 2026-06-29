@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 2.34.0*
+*Version: 3.0.0*
 
 > **Documentation** — Installation, deployment, and usage across the CLI, Python API,
 > MCP, and A2A agent interfaces are maintained in the
