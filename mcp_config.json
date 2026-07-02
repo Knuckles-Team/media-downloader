@@ -7,10 +7,7 @@
         "media-downloader-mcp"
       ],
       "env": {
-        "MCP_TOOL_MODE": "condensed",
-        "AGENT_DESCRIPTION": "<YOUR_AGENT_DESCRIPTION>",
-        "AGENT_SYSTEM_PROMPT": "<YOUR_AGENT_SYSTEM_PROMPT>",
-        "DEFAULT_AGENT_NAME": "<YOUR_DEFAULT_AGENT_NAME>"
+        "MCP_TOOL_MODE": "condensed"
       }
     }
   }
