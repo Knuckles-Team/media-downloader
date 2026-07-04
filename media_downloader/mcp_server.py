@@ -98,7 +98,12 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
             if result_file and os.path.exists(result_file):
                 if ctx:
                     await ctx.info(f"Download complete: {result_file}")
-                return {"status": "success", "file": result_file}
+                resp = {"status": "success", "file": result_file}
+                # Native epistemic-graph ingestion result (blob + :MediaAsset), when
+                # a live engine was reachable; None otherwise. CONCEPT:AU-KG.ingest.list-durable-media
+                if downloader.last_kg_asset:
+                    resp["kg_asset"] = downloader.last_kg_asset
+                return resp
             else:
                 return {
                     "status": "error",

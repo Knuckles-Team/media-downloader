@@ -34,6 +34,7 @@ class MediaDownloader:
         links: list | None = None,
         download_directory: str | None = None,
         audio: bool = False,
+        ingest_to_kg: bool = True,
     ):
         self.links = links if links is not None else []
         if download_directory:
@@ -41,6 +42,10 @@ class MediaDownloader:
         else:
             self.download_directory = f"{os.path.expanduser('~')}/Downloads"
         self.audio = audio
+        # Native KG ingestion is on by default; it auto-no-ops when no epistemic-graph
+        # engine is reachable, so it costs nothing without KG infrastructure.
+        self.ingest_to_kg = ingest_to_kg
+        self.last_kg_asset: dict | None = None
         self.logger = logging.getLogger("MediaDownloader")
         self.progress_callback = None
 
@@ -88,7 +93,9 @@ class MediaDownloader:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(link, download=True)
-                return ydl.prepare_filename(info)
+                path = ydl.prepare_filename(info)
+                self._maybe_ingest(path, info, link)
+                return path
         except Exception as e:
             self.logger.error(f"Failed to download {link}: {str(e)}")
             try:
@@ -96,10 +103,25 @@ class MediaDownloader:
                 ydl_opts["outtmpl"] = outtmpl
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(link, download=True)
-                    return ydl.prepare_filename(info)
+                    path = ydl.prepare_filename(info)
+                    self._maybe_ingest(path, info, link)
+                    return path
             except Exception as e:
                 self.logger.error(f"Retry failed for {link}: {str(e)}")
                 return None
+
+    def _maybe_ingest(self, path, info, link):
+        """Natively store a freshly downloaded file into the knowledge graph.
+
+        Default-on and best-effort: no-ops when ``ingest_to_kg`` is off or no live
+        epistemic-graph engine is reachable. Records the result on
+        ``self.last_kg_asset`` (``{asset_id, digest, size_bytes, media_type}``).
+        """
+        if not self.ingest_to_kg or not path:
+            return
+        from media_downloader.kg_media import ingest_media_file
+
+        self.last_kg_asset = ingest_media_file(path, info=info, source_url=link)
 
     def get_channel_videos(self, channel, limit=-1):
         self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
