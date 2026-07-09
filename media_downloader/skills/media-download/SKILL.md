@@ -1,5 +1,6 @@
 ---
 name: media-download
+skill_type: skill
 description: >-
   Download video (or audio) from YouTube, Rumble, and other yt-dlp-supported sites
   via the media-downloader MCP server, and natively store the downloaded media into

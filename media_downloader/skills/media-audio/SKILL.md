@@ -1,5 +1,6 @@
 ---
 name: media-audio
+skill_type: skill
 description: >-
   Extract audio as MP3 from a video/media URL via the media-downloader MCP server,
   natively storing the resulting audio into epistemic-graph as a content-addressed
