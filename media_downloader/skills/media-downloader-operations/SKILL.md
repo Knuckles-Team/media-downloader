@@ -1,5 +1,6 @@
 ---
 name: media-downloader-operations
+skill_type: skill
 description: >-
   Operate media-downloader through its governed MCP and GraphOS capabilities, including media audio, media download. Use when a request requires this provider's read, change, automation, ingestion, troubleshooting, or evidence workflows.
 ---

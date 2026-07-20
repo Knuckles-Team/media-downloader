@@ -1,5 +1,6 @@
 ---
 name: media-starter
+skill_type: skill
 description: >-
   Media Downloader API + MCP Server + A2A Server Use when working with Media Downloader via this package's MCP
   server/agent — discover its tools, run an operation, or check its reference
