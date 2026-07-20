@@ -7,11 +7,20 @@ import os
 import re
 import sys
 from multiprocessing import Pool
+from urllib.parse import urlsplit
 
-import requests
 import yt_dlp
 
-__version__ = "2.34.0"
+from media_downloader.security import (
+    MediaSecurityError,
+    contained_output_path,
+    public_source_url,
+    resolve_output_directory,
+    safe_metadata_get,
+    validate_media_url,
+)
+
+__version__ = "3.0.1"
 
 
 class YtDlpLogger:
@@ -19,13 +28,28 @@ class YtDlpLogger:
         self.logger = logger
 
     def debug(self, msg):
-        self.logger.debug(msg)
+        self.logger.debug("yt-dlp diagnostic event")
 
     def warning(self, msg):
-        self.logger.warning(msg)
+        self.logger.warning("yt-dlp warning event")
 
     def error(self, msg):
-        self.logger.error(msg)
+        self.logger.error("yt-dlp error event")
+
+
+class SafeYoutubeDL(yt_dlp.YoutubeDL):
+    """Revalidate every URL crossing yt-dlp's central request boundary."""
+
+    def urlopen(self, req):
+        request_url = req if isinstance(req, str) else getattr(req, "url", None)
+        if not request_url:
+            raise MediaSecurityError("Downloader request omitted its URL")
+        validate_media_url(request_url)
+        response = super().urlopen(req)
+        final_url = getattr(response, "url", None)
+        if final_url:
+            validate_media_url(final_url)
+        return response
 
 
 class MediaDownloader:
@@ -34,13 +58,19 @@ class MediaDownloader:
         links: list | None = None,
         download_directory: str | None = None,
         audio: bool = False,
+        ingest_to_kg: bool = True,
+        output_root: str | None = None,
     ):
         self.links = links if links is not None else []
-        if download_directory:
-            self.download_directory = download_directory
-        else:
-            self.download_directory = f"{os.path.expanduser('~')}/Downloads"
+        self.output_root, output_directory = resolve_output_directory(
+            download_directory, output_root=output_root
+        )
+        self.download_directory = str(output_directory)
         self.audio = audio
+        # Native KG ingestion is on by default; it auto-no-ops when no epistemic-graph
+        # engine is reachable, so it costs nothing without KG infrastructure.
+        self.ingest_to_kg = ingest_to_kg
+        self.last_kg_asset: dict | None = None
         self.logger = logging.getLogger("MediaDownloader")
         self.progress_callback = None
 
@@ -54,19 +84,21 @@ class MediaDownloader:
         self.links = list(dict.fromkeys(self.links))
 
     def download_video(self, link):
-        self.logger.debug(f"Downloading video: {link}")
+        link = validate_media_url(link.strip())
+        self.logger.debug("Downloading media from host %s", urlsplit(link).hostname)
         outtmpl = f"{self.download_directory}/%(uploader)s - %(title)s.%(ext)s"
-        if "rumble.com" in link:
-            self.logger.debug(f"Processing Rumble URL: {link}")
-            rumble_url = requests.get(link, timeout=10)
+        host = (urlsplit(link).hostname or "").lower()
+        if host == "rumble.com" or host.endswith(".rumble.com"):
+            self.logger.debug("Processing Rumble media URL")
+            rumble_url = safe_metadata_get(link, timeout=10)
             for rumble_embedded_url in rumble_url.text.split(","):
                 if "embedUrl" in rumble_embedded_url:
                     rumble_embedded_url = re.sub(
                         '"', "", re.sub('"embedUrl":', "", rumble_embedded_url)
                     )
-                    link = rumble_embedded_url
+                    link = validate_media_url(rumble_embedded_url.strip())
                     outtmpl = f"{self.download_directory}/%(title)s.%(ext)s"
-                    self.logger.debug(f"Updated Rumble URL: {link}")
+                    self.logger.debug("Validated the embedded Rumble media URL")
 
         ydl_opts = {
             "format": "bestaudio/best" if self.audio else "best",
@@ -75,6 +107,9 @@ class MediaDownloader:
             "no_warnings": True,
             "progress_hooks": [self.progress_hook],
             "logger": YtDlpLogger(self.logger),
+            "restrictfilenames": True,
+            "windowsfilenames": True,
+            "noplaylist": True,
         }
         if self.audio:
             ydl_opts["postprocessors"] = [
@@ -86,29 +121,50 @@ class MediaDownloader:
             ]
 
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with SafeYoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(link, download=True)
-                return ydl.prepare_filename(info)
+                path = ydl.prepare_filename(info)
+                path = str(contained_output_path(path, self.output_root))
+                self._maybe_ingest(path, info, link)
+                return path
         except Exception as e:
-            self.logger.error(f"Failed to download {link}: {str(e)}")
+            self.logger.error("Media download failed (%s)", type(e).__name__)
             try:
                 outtmpl = f"{self.download_directory}/%(id)s.%(ext)s"
                 ydl_opts["outtmpl"] = outtmpl
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                with SafeYoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(link, download=True)
-                    return ydl.prepare_filename(info)
+                    path = ydl.prepare_filename(info)
+                    path = str(contained_output_path(path, self.output_root))
+                    self._maybe_ingest(path, info, link)
+                    return path
             except Exception as e:
-                self.logger.error(f"Retry failed for {link}: {str(e)}")
+                self.logger.error("Media download retry failed (%s)", type(e).__name__)
                 return None
 
+    def _maybe_ingest(self, path, info, link):
+        """Natively store a freshly downloaded file into the knowledge graph.
+
+        Default-on and best-effort: no-ops when ``ingest_to_kg`` is off or no live
+        epistemic-graph engine is reachable. Records the result on
+        ``self.last_kg_asset`` (``{asset_id, digest, size_bytes, media_type}``).
+        """
+        if not self.ingest_to_kg or not path:
+            return
+        from media_downloader.kg_media import ingest_media_file
+
+        self.last_kg_asset = ingest_media_file(
+            path, info=info, source_url=public_source_url(link)
+        )
+
     def get_channel_videos(self, channel, limit=-1):
-        self.logger.debug(f"Fetching videos for channel: {channel}, limit: {limit}")
+        self.logger.debug("Fetching videos for a channel (limit=%s)", limit)
         username = channel
         attempts = 0
         while attempts < 3:
             url = f"https://www.youtube.com/user/{username}/videos"
-            self.logger.debug(f"Trying URL: {url}")
-            page = requests.get(url, timeout=10).content
+            self.logger.debug("Trying a canonical YouTube channel URL")
+            page = safe_metadata_get(url, timeout=10).content
             data = str(page).split(" ")
             item = 'href="/watch?'
             vids = [
@@ -124,8 +180,8 @@ class MediaDownloader:
                 return
             else:
                 url = f"https://www.youtube.com/c/{channel}/videos"
-                self.logger.debug(f"Trying URL: {url}")
-                page = requests.get(url, timeout=10).content
+                self.logger.debug("Trying the alternate canonical YouTube channel URL")
+                page = safe_metadata_get(url, timeout=10).content
                 data = str(page).split(" ")
                 item = "https://i.ytimg.com/vi/"
                 vids = []
@@ -150,7 +206,7 @@ class MediaDownloader:
                         x += 1
                     return
             attempts += 1
-        self.logger.error(f"Could not find user or channel: {channel}")
+        self.logger.error("Could not find the requested channel")
 
     def progress_hook(self, d):
         if self.progress_callback and d["status"] == "downloading":
@@ -165,7 +221,11 @@ class MediaDownloader:
 
     def download_all(self):
         self.logger.debug(f"Downloading {len(self.links)} links")
-        pool = Pool(processes=os.cpu_count())
+        if len(self.links) > 1_000:
+            raise MediaSecurityError("Media link count limit exceeded")
+        max_workers = max(1, min(int(os.environ.get("MEDIA_DOWNLOADER_MAX_WORKERS", "4")), 4))
+        worker_count = min(max_workers, max(1, len(self.links)))
+        pool = Pool(processes=worker_count)
         try:
             results = pool.map(self.download_video, self.links)
             self.links = []
@@ -212,14 +272,12 @@ def media_downloader():
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    video_downloader_instance = MediaDownloader()
+    video_downloader_instance = MediaDownloader(download_directory=args.directory)
 
     if args.audio:
         video_downloader_instance.audio = True
     if args.channel:
         video_downloader_instance.get_channel_videos(args.channel)
-    if args.directory:
-        video_downloader_instance.download_directory = args.directory
     if args.file:
         video_downloader_instance.open_file(args.file)
     if args.links:

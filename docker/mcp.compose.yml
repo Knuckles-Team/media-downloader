@@ -2,7 +2,19 @@ version: '3.8'
 
 services:
   media-downloader-mcp:
-    image: knucklessg1/media-downloader:mcp
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: ${MCP_CONTAINER_MEMORY_LIMIT:-2g}
+    cpus: ${MCP_CONTAINER_CPU_LIMIT:-1.0}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
+    image: ${MEDIA_DOWNLOADER_MCP_IMAGE:?set-MEDIA_DOWNLOADER_MCP_IMAGE-to-image@sha256-digest}
     container_name: media-downloader-mcp
     hostname: media-downloader-mcp
     restart: always
@@ -14,7 +26,7 @@ services:
       - PORT=8000
       - TRANSPORT=streamable-http
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s

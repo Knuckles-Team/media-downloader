@@ -51,7 +51,7 @@ def mock_agent_utilities_and_mcp():
 
     with (
         patch(
-            "agent_utilities.mcp_utilities.create_mcp_server",
+            "agent_utilities.mcp.server_factory.create_mcp_server",
             return_value=(mock_args, local_mcp, []),
         ) as mock_create_mcp,
         patch("agent_utilities.initialize_workspace"),
@@ -73,6 +73,12 @@ def mock_agent_utilities_and_mcp():
             "mock_args": mock_args,
             "mock_create_agent_server": mock_create_agent_server,
         }
+
+
+@pytest.fixture(autouse=True)
+def secure_media_output_root(monkeypatch):
+    """Keep legacy /tmp fixture paths inside the configured test output root."""
+    monkeypatch.setenv("MEDIA_DOWNLOADER_OUTPUT_ROOT", "/tmp")
 
 
 # =====================================================================
@@ -150,9 +156,9 @@ def test_ytdlp_logger():
     logger.debug("test debug")
     logger.warning("test warning")
     logger.error("test error")
-    mock_log.debug.assert_called_once_with("test debug")
-    mock_log.warning.assert_called_once_with("test warning")
-    mock_log.error.assert_called_once_with("test error")
+    mock_log.debug.assert_called_once_with("yt-dlp diagnostic event")
+    mock_log.warning.assert_called_once_with("yt-dlp warning event")
+    mock_log.error.assert_called_once_with("yt-dlp error event")
 
 
 # =====================================================================
@@ -165,7 +171,7 @@ def test_mediadownloader_init():
     downloader = MediaDownloader()
     assert downloader.links == []
     assert downloader.audio is False
-    assert downloader.download_directory == f"{os.path.expanduser('~')}/Downloads"
+    assert downloader.download_directory == "/tmp"
 
     # Test custom initialization
     downloader2 = MediaDownloader(
@@ -200,29 +206,30 @@ def test_open_file():
     assert "https://youtube.com/2\n" in downloader.links
 
 
-@patch("media_downloader.media_downloader.yt_dlp.YoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
+@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
 @patch("os.path.exists", return_value=True)
-def test_download_video_standard(_mock_exists, mock_get):
+def test_download_video_standard(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     result = downloader.download_video("https://youtube.com/watch?v=123")
     assert result == "/tmp/downloads/MockUploader - Mock Video Title.mp4"
 
 
-@patch("media_downloader.media_downloader.yt_dlp.YoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
+@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
 @patch("os.path.exists", return_value=True)
-def test_download_video_audio(_mock_exists, mock_get):
+def test_download_video_audio(_mock_exists, _mock_validate):
     # Tests the audio path which triggers FFmpegExtractAudio postprocessor branch
     downloader = MediaDownloader(download_directory="/tmp/downloads", audio=True)
     result = downloader.download_video("https://youtube.com/watch?v=123")
     assert result == "/tmp/downloads/MockUploader - Mock Video Title.mp4"
 
 
-@patch("media_downloader.media_downloader.yt_dlp.YoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
+@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
 @patch("os.path.exists", return_value=True)
-def test_download_video_rumble(_mock_exists, mock_get):
+def test_download_video_rumble(_mock_exists, _mock_validate, mock_get):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     result = downloader.download_video("https://rumble.com/v12345")
     assert result == "/tmp/downloads/MockUploader - Mock Video Title.mp4"
@@ -230,25 +237,25 @@ def test_download_video_rumble(_mock_exists, mock_get):
     mock_get.assert_called()
 
 
-@patch("media_downloader.media_downloader.yt_dlp.YoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
+@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
 @patch("os.path.exists", return_value=True)
-def test_download_video_retry_fallback(_mock_exists, mock_get):
+def test_download_video_retry_fallback(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     # "fail_first" will throw exception on the first yt-dlp run, triggering the retry template
     result = downloader.download_video("https://youtube.com/fail_first")
     assert result == "/tmp/downloads/abc123xyz.mp4"
 
 
-@patch("media_downloader.media_downloader.yt_dlp.YoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
-def test_download_video_permanent_failure(mock_get):
+@patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
+@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+def test_download_video_permanent_failure(_mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     result = downloader.download_video("https://youtube.com/fail_always")
     assert result is None
 
 
-@patch("media_downloader.media_downloader.requests.get", side_effect=mock_requests_get)
+@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
 def test_get_channel_videos_username(mock_get):
     downloader = MediaDownloader()
     downloader.get_channel_videos("test_user", limit=1)
@@ -256,7 +263,7 @@ def test_get_channel_videos_username(mock_get):
     assert "youtube_user_video" in downloader.links[0]
 
 
-@patch("media_downloader.media_downloader.requests.get")
+@patch("media_downloader.media_downloader.safe_metadata_get")
 def test_get_channel_videos_channel_fallback(mock_get):
     # First response fails to find any videos (no watch? in text)
     resp1 = MagicMock()
@@ -274,7 +281,7 @@ def test_get_channel_videos_channel_fallback(mock_get):
     assert downloader.links[0] == "https://www.youtube.com/watch?v=fallback_c_video"
 
 
-@patch("media_downloader.media_downloader.requests.get")
+@patch("media_downloader.media_downloader.safe_metadata_get")
 @patch("media_downloader.media_downloader.re.search", side_effect=AttributeError)
 def test_get_channel_videos_attribute_error_handling(_mock_search, mock_get):
     # Force AttributeError to cover the except AttributeError branch
@@ -293,7 +300,7 @@ def test_get_channel_videos_attribute_error_handling(_mock_search, mock_get):
     assert len(downloader.links) == 0
 
 
-@patch("media_downloader.media_downloader.requests.get")
+@patch("media_downloader.media_downloader.safe_metadata_get")
 def test_get_channel_videos_not_found(mock_get):
     # Return empty response for all attempts to trigger user/channel not found log
     resp = MagicMock()
@@ -375,7 +382,7 @@ def test_cli_media_downloader(mock_args, mock_downloader_class):
         media_downloader()
         assert mock_instance.audio is True
         mock_instance.get_channel_videos.assert_called_once_with("test_channel")
-        assert mock_instance.download_directory == "/tmp/test_dir"
+        mock_downloader_class.assert_called_with(download_directory="/tmp/test_dir")
         mock_instance.open_file.assert_called_once_with("mock_file.txt")
         mock_instance.links.extend.assert_called()
         mock_instance.download_all.assert_called_once()
@@ -430,6 +437,7 @@ async def test_mcp_tool_download_media_success(_mock_exists, mock_downloader_cla
 
     mock_downloader_instance = MagicMock()
     mock_downloader_instance.download_all.return_value = "/tmp/downloads/video.mp4"
+    mock_downloader_instance.output_root = "/tmp/downloads"
     mock_downloader_class.return_value = mock_downloader_instance
 
     mock_ctx = AsyncMock(spec=Context)
@@ -441,8 +449,8 @@ async def test_mcp_tool_download_media_success(_mock_exists, mock_downloader_cla
         ctx=mock_ctx,
     )
 
-    assert result == {"status": "success", "file": "/tmp/downloads/video.mp4"}
-    mock_ctx.info.assert_called_with("Download complete: /tmp/downloads/video.mp4")
+    assert result == {"status": "success", "file": "video.mp4"}
+    mock_ctx.info.assert_called_with("Download complete")
     mock_downloader_class.assert_called_once_with(
         links=["https://youtube.com/watch?v=123"],
         download_directory="/tmp/downloads",
@@ -492,7 +500,7 @@ async def test_mcp_tool_download_media_exception(mock_downloader_class):
 
     assert result == {
         "status": "error",
-        "message": "Simulated tool crash",
+        "message": "Download request failed",
     }
 
 
@@ -686,7 +694,7 @@ def test_mcp_server_main_block():
     with (
         patch("sys.argv", ["media_downloader"]),
         patch(
-            "agent_utilities.mcp_utilities.create_mcp_server",
+            "agent_utilities.mcp.server_factory.create_mcp_server",
             return_value=(mock_args, mock_mcp, []),
         ),
     ):

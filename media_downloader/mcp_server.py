@@ -24,18 +24,16 @@ import os
 import sys
 from typing import Any
 
-from agent_utilities.mcp_utilities import (
-    create_mcp_server,
-    load_config,
-    register_tool_surface,
-)
+from agent_utilities.core.config import load_config
+from agent_utilities.mcp.server_factory import create_mcp_server
+from agent_utilities.mcp.verbose_tools import register_tool_surface
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.logging import get_logger
 from pydantic import Field
 
 from media_downloader.media_downloader import MediaDownloader
 
-__version__ = "2.34.0"
+__version__ = "3.0.1"
 
 logger = get_logger("MediaDownloaderMCPServer")
 logger.setLevel(logging.INFO)
@@ -83,7 +81,7 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
     ) -> dict:
         """Download video or audio from supported sites (YouTube, Rumble, etc.)."""
         if ctx:
-            await ctx.info(f"Downloading media URL: {video_url}...")
+            await ctx.info("Downloading the requested media URL")
 
         try:
             from media_downloader.media_downloader import MediaDownloader
@@ -97,16 +95,22 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
             result_file = downloader.download_all()
             if result_file and os.path.exists(result_file):
                 if ctx:
-                    await ctx.info(f"Download complete: {result_file}")
-                return {"status": "success", "file": result_file}
+                    await ctx.info("Download complete")
+                relative_file = os.path.relpath(result_file, downloader.output_root)
+                resp = {"status": "success", "file": relative_file.replace(os.sep, "/")}
+                # Native epistemic-graph ingestion result (blob + :MediaAsset), when
+                # a live engine was reachable; None otherwise. CONCEPT:AU-KG.ingest.list-durable-media
+                if downloader.last_kg_asset:
+                    resp["kg_asset"] = downloader.last_kg_asset
+                return resp
             else:
                 return {
                     "status": "error",
                     "message": "Download failed or did not return a valid file path.",
                 }
         except Exception as e:
-            logger.error(f"Download error: {e}")
-            return {"status": "error", "message": str(e)}
+            logger.error("Download error (%s)", type(e).__name__)
+            return {"status": "error", "message": "Download request failed"}
 
     registered_tags = register_tool_surface(
         mcp,

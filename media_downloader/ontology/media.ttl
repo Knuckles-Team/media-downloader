@@ -1,0 +1,31 @@
+@prefix : <http://knuckles.team/kg#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:MediaArtifact a owl:Class ;
+    rdfs:label "Media artifact" .
+
+:MediaOccurrence a owl:Class ;
+    rdfs:label "Media occurrence" .
+
+:MediaRendition a owl:Class ;
+    rdfs:label "Media rendition" .
+
+:mediaDigest a owl:DatatypeProperty ;
+    rdfs:label "content digest" ;
+    rdfs:range xsd:string .
+
+:mediaType a owl:DatatypeProperty ;
+    rdfs:label "media type" ;
+    rdfs:range xsd:string .
+
+:renditionOf a owl:ObjectProperty ;
+    rdfs:label "rendition of" ;
+    rdfs:domain :MediaRendition ;
+    rdfs:range :MediaArtifact .
+
+<http://knuckles.team/kg/media-downloader> a owl:Ontology ;
+    rdfs:label "Media downloader artifact and occurrence ontology" ;
+    rdfs:comment "Content-addressed media identity separated from privacy-scoped source occurrences and derived renditions." ;
+    owl:imports <http://knuckles.team/kg> .

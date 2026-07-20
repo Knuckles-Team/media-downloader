@@ -11,7 +11,6 @@
     - `mcp_server.py`: Main MCP server entry point and tool registration.
     - `agent.py`: Pydantic AI agent definition and logic.
     - `skills/`: Directory containing modular agent skills (if applicable).
-    - `agent/`: Internal agent logic and prompt templates.
 
 ### Architecture Diagram
 ```mermaid
@@ -61,7 +60,7 @@ pre-commit run --all-files
 
 ### File Tree
 ```text
-├── .bumpversion.cfg\n├── .dockerignore\n├── .env\n├── .gitattributes\n├── .github\n│   └── workflows\n│       └── pipeline.yml\n├── .gitignore\n├── .pre-commit-config.yaml\n├── AGENTS.md\n├── Dockerfile\n├── LICENSE\n├── MANIFEST.in\n├── README.md\n├── compose.yml\n├── debug.Dockerfile\n├── mcp\n│   └── downloads\n├── mcp.compose.yml\n├── media_downloader\n│   ├── __init__.py\n│   ├── __main__.py\n│   ├── agent\n│   │   ├── AGENTS.md\n│   │   ├── CRON.md\n│   │   ├── HEARTBEAT.md\n│   │   ├── IDENTITY.md\n│   │   ├── MEMORY.md\n│   │   ├── USER.md\n│   │   └── templates.py\n│   ├── agent.py\n│   ├── mcp_server.py\n│   └── media_downloader.py\n├── pyproject.toml\n├── pytest.ini\n├── requirements.txt\n├── scripts\n│   └── validate_a2a_agent.py\n└── tests\n    ├── media_downloader_mcp.log\n    └── test_mcp_server.py
+├── .bumpversion.cfg\n├── .dockerignore\n├── .env\n├── .gitattributes\n├── .github\n│   └── workflows\n│       └── pipeline.yml\n├── .gitignore\n├── .pre-commit-config.yaml\n├── AGENTS.md\n├── Dockerfile\n├── LICENSE\n├── MANIFEST.in\n├── README.md\n├── compose.yml\n├── debug.Dockerfile\n├── mcp\n│   └── downloads\n├── mcp.compose.yml\n├── media_downloader\n│   ├── __init__.py\n│   ├── __main__.py\n│   ├── agent.py\n│   ├── mcp_server.py\n│   └── media_downloader.py\n├── pyproject.toml\n├── pytest.ini\n├── requirements.txt\n├── scripts\n│   └── validate_a2a_agent.py\n└── tests\n    ├── media_downloader_mcp.log\n    └── test_mcp_server.py
 ```
 
 ## Code Style & Conventions
@@ -208,23 +207,23 @@ why rather than bypassing it.
 ## Working with Git Worktrees (multi-session)
 
 Multiple agents/sessions work the `agent-packages/*` repos concurrently. **Do not
-edit the canonical checkout** (`/home/apps/workspace/agent-packages/<repo>`) — a
+edit the canonical checkout** (`${WORKSPACE_ROOT}/agent-packages/<repo>`) — a
 background `repository-manager` sync can reset its working tree and discard
 uncommitted edits. Take your own git worktree on your own branch instead:
 
 ```bash
 # preferred — repository-manager MCP:
-rm_worktree add <repo> <your-branch>      # -> /home/apps/worktrees/<repo>/<your-branch>
+rm_worktree add <repo> <your-branch>      # -> ${WORKTREE_ROOT}/<repo>/<your-branch>
 
 # raw-git fallback:
 git -C agent-packages/<repo> checkout main
-git -C agent-packages/<repo> worktree add /home/apps/worktrees/<repo>/<branch> -b <branch>
+git -C agent-packages/<repo> worktree add ${WORKTREE_ROOT}/<repo>/<branch> -b <branch>
 ```
 
 Work in the worktree and **commit often** (commits survive a working-tree reset).
 Each session must use a **distinct branch** — git allows a branch in only one
 worktree, which is what keeps concurrent sessions from colliding. Worktrees live
-under `/home/apps/worktrees/` (outside the workspace scan, so the sync leaves them
+under `${WORKTREE_ROOT}/` (outside the workspace scan, so the sync leaves them
 alone).
 
 **Finishing work in a worktree** — run this sequence before calling it done:
@@ -243,8 +242,30 @@ alone).
 Working in parallel with other sessions/worktrees? **Reserve a concept id before you write its `CONCEPT:` marker** so two sessions never collide:
 
 ```bash
-agent-utilities --json concept reserve --ns KG-2   # or a package prefix, e.g. KEY
+agent-utilities --json concept reserve --ns EG-KG.compute.backend   # or a package prefix, e.g. KEY
 ```
 
 Full protocol (ledger, merge=union, reconcile, MCP/REST): <https://knuckles-team.github.io/agent-utilities/concept_coordination/>
 <!-- END concept-coordination (generated) -->
+
+## Version & lockfile drift edict (keep the version mirrors AND the lock in sync)
+
+The two most common release-breakers in this fleet are **version drift** (the version in
+`pyproject.toml`/`.bumpversion.cfg` advancing while `README.md`, `docker/Dockerfile`, and the
+module `__version__`s lag) and a **stale `uv.lock`** (shipping known-vulnerable transitive deps).
+A version mismatch makes the next `bump-my-version` throw `VersionNotFoundException`; a stale lock
+is what Dependabot flags. Rules:
+
+1. **Never hand-edit a version string.** Change the version ONLY via
+   `bump-my-version bump {patch|minor|major}` (a.k.a. `bump2version`), which rewrites every file
+   registered in `.bumpversion.cfg` in one atomic, tagged commit. If you edited the version in
+   `pyproject.toml` by hand, you created drift — revert and use the bumper.
+2. **Every version-bearing file must be registered in `.bumpversion.cfg`** — at minimum
+   `pyproject.toml` AND `README.md`, plus `docker/Dockerfile` and any module `__version__`. Never
+   add a file that embeds the version without a `[bumpversion:file:...]` entry for it.
+3. **Re-lock on every dependency change.** After editing `pyproject.toml` deps/extras, run
+   `uv lock` and commit `uv.lock` in the SAME change. The `uv-lock` pre-commit hook runs with
+   `--locked` and fails on drift — never bypass it. The committed `uv.lock` is the
+   Dependabot/security surface.
+4. **Patch CVEs with a version floor at the source, then re-lock.** `uv` resolves one version
+   graph-wide, so a lower-bound in the extra that pulls a dependency raises it for the whole lock.
