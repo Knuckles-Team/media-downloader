@@ -20,6 +20,8 @@ import mimetypes
 import os
 from typing import Any
 
+from media_downloader.security import public_source_url
+
 logger = logging.getLogger("MediaDownloader.kg")
 
 # yt-dlp info keys worth carrying onto the :MediaAsset node.
@@ -45,7 +47,7 @@ def _media_store() -> Any | None:
         )
         from agent_utilities.knowledge_graph.memory.media_store import MediaStore
     except Exception as e:  # noqa: BLE001 — agent-utilities KG stack absent
-        logger.debug("KG media ingest unavailable (import): %s", e)
+        logger.debug("Operation failed: error_type=%s", type(e).__name__)
         return None
     try:
         engine = GraphComputeEngine()
@@ -54,7 +56,7 @@ def _media_store() -> Any | None:
             return None
         return MediaStore(engine)
     except Exception as e:  # noqa: BLE001 — no reachable engine
-        logger.debug("KG media ingest: engine unreachable: %s", e)
+        logger.debug("Operation failed: error_type=%s", type(e).__name__)
         return None
 
 
@@ -93,13 +95,19 @@ def ingest_media_file(
         with open(file_path, "rb") as fh:
             data = fh.read()
     except OSError as e:
-        logger.warning("KG media ingest: cannot read %s: %s", file_path, e)
+        logger.warning(
+            "KG media ingest: cannot read media bytes (%s)", type(e).__name__
+        )
         return None
 
     extra = {k: info[k] for k in _INFO_FIELDS if info.get(k) is not None}
+    if extra.get("webpage_url"):
+        extra["webpage_url"] = public_source_url(str(extra["webpage_url"]))
     if source_url:
-        extra["source_url"] = source_url
-    name = info.get("title") or os.path.basename(file_path)
+        extra["source_url"] = public_source_url(source_url)
+    name = info.get("title") or (
+        f"media-{info['id']}" if info.get("id") else "downloaded-media"
+    )
 
     try:
         stored = store.store_media(
@@ -111,14 +119,13 @@ def ingest_media_file(
             extra=extra,
         )
     except Exception as e:  # noqa: BLE001 — engine/store failure is non-fatal
-        logger.warning("KG media ingest: store_media failed: %s", e)
+        logger.warning("Operation failed: error_type=%s", type(e).__name__)
         return None
     if stored is None:
         return None
 
     logger.info(
-        "KG media ingest: stored %s (%s bytes) as asset %s digest %s",
-        name,
+        "KG media ingest: stored media bytes (%s bytes) as asset %s digest %s",
         len(data),
         stored.asset_id,
         stored.digest[:16],

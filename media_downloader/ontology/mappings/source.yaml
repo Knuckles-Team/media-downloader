@@ -1,0 +1,9 @@
+schema_version: '1'
+connector: media-downloader
+ontology_source: media-downloader
+sync: []
+governance:
+  default_acl: quarantine
+  identity: opaque-reference
+  tenant: required-at-materialization
+  provenance: required-at-materialization

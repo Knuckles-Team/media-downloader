@@ -1,0 +1,4 @@
+interface:
+  display_name: "Media Downloader Operations"
+  short_description: "Help with Media Downloader Operations tasks"
+  default_prompt: "Use $media-downloader-operations to complete a governed provider workflow."

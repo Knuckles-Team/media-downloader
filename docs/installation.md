@@ -23,7 +23,7 @@ extra for the runtime you need:
 | Extra | Install | Pulls in |
 |---|---|---|
 | `mcp` | `pip install "media-downloader[mcp]"` | FastMCP MCP-server runtime (`agent-utilities[mcp]`) |
-| `agent` | `pip install "media-downloader[agent]"` | Pydantic-AI agent + Logfire tracing (`agent-utilities[agent,logfire]`) |
+| `agent` | `pip install "media-downloader[agent]"` | Pydantic-AI agent + Logfire tracing (`agent-utilities[agent-runtime,logfire]`) |
 | `all` | `pip install "media-downloader[all]"` | The MCP server and the agent together |
 | `test` | `pip install "media-downloader[test]"` | `pytest`, `pytest-asyncio`, `pytest-cov`, `pytest-xdist` |
 
@@ -49,14 +49,14 @@ uv run media-downloader-mcp
 
 ## Prebuilt Docker image
 
-A multi-stage, slim image is published on every release (entrypoint
+A multi-stage runtime image is published on every release (entrypoint
 `media-downloader-mcp`, `ffmpeg` included):
 
 ```bash
-docker pull knucklessg1/media-downloader:latest
+docker pull example/media-downloader@sha256:<digest>
 
 docker run --rm -i \
-  knucklessg1/media-downloader:latest        # stdio transport (default)
+  example/media-downloader@sha256:<digest>        # stdio transport (default)
 ```
 
 For an HTTP server with a published port, see [Deployment](deployment.md).

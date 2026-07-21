@@ -53,9 +53,30 @@ def test_ingest_media_file_stores_bytes_and_metadata(tmp_path):
     assert data == f.read_bytes()
     assert kw["source"] == "media-downloader"
     assert kw["mime_type"] == "video/mp4"
+    # Title is preferred for the display name when present; the KG still
+    # captures the richer id/title/uploader metadata (union of both fields).
     assert kw["name"] == "Clip"
     assert kw["extra"]["id"] == "abc123"
-    assert kw["extra"]["source_url"] == "https://example.test/watch?v=abc123"
+    assert kw["extra"]["title"] == "Clip"
+    assert kw["extra"]["uploader"] == "Chan"
+    # source_url is sanitized down to scheme+host — no path/query survives.
+    assert kw["extra"]["source_url"] == "https://example.test"
+
+
+def test_ingest_media_file_name_falls_back_without_title(tmp_path):
+    """No title in info -> name falls back to an id-based label."""
+    f = tmp_path / "clip.mp4"
+    f.write_bytes(b"\x00\x01video-bytes\x02")
+    store = _FakeMediaStore()
+
+    ingest_media_file(
+        str(f),
+        info={"id": "abc123", "duration": 5},
+        media_store=store,
+    )
+
+    _, kw = store.calls[0]
+    assert kw["name"] == "media-abc123"
 
 
 def test_ingest_media_file_noops_without_engine(tmp_path):
@@ -74,7 +95,11 @@ def test_download_video_invokes_native_ingest(monkeypatch, tmp_path):
     """The download path natively calls ingestion and records the asset."""
     from media_downloader.media_downloader import MediaDownloader
 
-    dl = MediaDownloader(download_directory=str(tmp_path), ingest_to_kg=True)
+    dl = MediaDownloader(
+        download_directory=str(tmp_path),
+        output_root=str(tmp_path),
+        ingest_to_kg=True,
+    )
     captured = {}
 
     def _fake_ingest(path, **kw):
@@ -97,7 +122,11 @@ def test_download_video_invokes_native_ingest(monkeypatch, tmp_path):
 def test_ingest_disabled_when_flag_off(tmp_path):
     from media_downloader.media_downloader import MediaDownloader
 
-    dl = MediaDownloader(download_directory=str(tmp_path), ingest_to_kg=False)
+    dl = MediaDownloader(
+        download_directory=str(tmp_path),
+        output_root=str(tmp_path),
+        ingest_to_kg=False,
+    )
     dl._maybe_ingest("/tmp/out.mp4", {}, "u")
     assert dl.last_kg_asset is None
     assert os.path.basename(__file__) == "test_kg_media.py"

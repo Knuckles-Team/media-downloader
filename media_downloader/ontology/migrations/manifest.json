@@ -1,0 +1,6 @@
+{
+  "connector": "media-downloader",
+  "current_ontology_source": "media-downloader",
+  "migrations": [],
+  "schema_version": "1"
+}

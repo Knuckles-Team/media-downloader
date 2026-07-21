@@ -1,0 +1,35 @@
+{
+  "api_version": "graphos.io/v1",
+  "artifacts": {
+    "a2a.json": "1eb67a2c045fb70ff850c6503cc4e36c76b77cc0104e7c1d71e35c53bca1f71f",
+    "connector_manifest.yml": "f72e61cce66b9456174b3dda6af72b3f914fa3be15ae731c532c8665f66ad122",
+    "media_downloader/ontology/fixtures/records.json": "e888495bbc4d20b7ff8e9e75112f9a6cec6f3de18ad4f915c74e8f0600ffd078",
+    "media_downloader/ontology/mappings/source.yaml": "d114eec18e7413ce1e57f07c44658a888d18486ddc50daccf80beb1e7353f046",
+    "media_downloader/ontology/media.ttl": "5a43bdb7644eaa86867e7432010a4613f671d9dfde4e0a78b5d890f35bf02802",
+    "media_downloader/ontology/migrations/manifest.json": "c47f67b3dce47fa141cb899bf6591569c1e5748d33188dcf7091a4ddd96d2491",
+    "media_downloader/ontology/shapes/connector.shacl.ttl": "3f3d4179bd430aafc9ed61940b13c4a342c1c56de93384ee74af497d11c6b487"
+  },
+  "checks": {
+    "declared_tool_schema": "not-applicable",
+    "manifest_integrity": "passed",
+    "privacy_contract": "passed",
+    "shacl_parse": "passed",
+    "synthetic_fixture_contract": "not-applicable"
+  },
+  "compatibility": {
+    "agent_utilities": ">=1.27.1,<2",
+    "bundle_schema": "2",
+    "epistemic_graph": ">=2.23.1,<3"
+  },
+  "connector": "media-downloader",
+  "kind": "ConnectorSourceAttestation",
+  "live_certified": false,
+  "mode": "offline-source",
+  "schema_version": "2",
+  "signature": "CebWpCsXtRYrst1ss0QEZNvDHFTprppnVCyQ_0W5fzUIkBRVP_Tbx19vvoCeXeC9G06o9eOgE29K6o44oznaDg",
+  "signature_algorithm": "ed25519",
+  "signer": "ontology-manifest-generator",
+  "signing_public_key": "q0Cp7bmQMqJhbofGKKw8xXC6KbFzukBDDke0UYVi8y4",
+  "status": "source-validated",
+  "validated_at": "2026-07-18T00:00:00Z"
+}
