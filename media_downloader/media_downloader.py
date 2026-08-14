@@ -20,7 +20,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
 
 
 class YtDlpLogger:
