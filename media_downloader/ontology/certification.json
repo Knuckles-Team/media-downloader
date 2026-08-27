@@ -1,7 +1,7 @@
 {
   "api_version": "graphos.io/v1",
   "artifacts": {
-    "connector_manifest.yml": "1c9bebddbcfc721e153cc7b243bbc286da02201dafe24e9a5212420820bdff1d",
+    "connector_manifest.yml": "d1cb36378a20cf1ab6566f43e513446a90189ef13886c62960a63c9015dcb6c4",
     "media_downloader/ontology/fixtures/records.json": "e888495bbc4d20b7ff8e9e75112f9a6cec6f3de18ad4f915c74e8f0600ffd078",
     "media_downloader/ontology/mappings/source.yaml": "d114eec18e7413ce1e57f07c44658a888d18486ddc50daccf80beb1e7353f046",
     "media_downloader/ontology/media.ttl": "5a43bdb7644eaa86867e7432010a4613f671d9dfde4e0a78b5d890f35bf02802",
@@ -16,9 +16,9 @@
     "synthetic_fixture_contract": "not-applicable"
   },
   "compatibility": {
-    "agent_utilities": ">=2.4.0,<3",
+    "agent_utilities": ">=2.5.0,<3",
     "bundle_schema": "2",
-    "epistemic_graph": ">=2.26.0,<3"
+    "epistemic_graph": ">=2.27.0,<3"
   },
   "connector": "media-downloader",
   "kind": "ConnectorSourceAttestation",
@@ -30,5 +30,5 @@
   "signer": "UNSIGNED-PREVIEW",
   "signing_public_key": "",
   "status": "source-validated",
-  "validated_at": "2026-08-21T04:30:39Z"
+  "validated_at": "2026-08-26T13:42:55Z"
 }
