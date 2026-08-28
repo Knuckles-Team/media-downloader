@@ -157,55 +157,63 @@ class MediaDownloader:
             path, info=info, source_url=public_source_url(link)
         )
 
+    def _append_links(self, vids, limit):
+        for x, vid in enumerate(vids):
+            if limit < 0 or x < limit:
+                self.links.append(vid)
+
+    @staticmethod
+    def _canonical_channel_video_links(page_content):
+        data = str(page_content).split(" ")
+        item = 'href="/watch?'
+        return [
+            line.replace('href="', "youtube.com") for line in data if item in line
+        ]
+
+    @staticmethod
+    def _alternate_channel_video_links(page_content):
+        data = str(page_content).split(" ")
+        item = "https://i.ytimg.com/vi/"
+        vids = []
+        for line in data:
+            if item not in line:
+                continue
+            try:
+                match = re.search("https://i.ytimg.com/vi/(.+?)/hqdefault.", line)
+            except AttributeError:
+                continue
+            if match:
+                vids.append(f"https://www.youtube.com/watch?v={match.group(1)}")
+        return vids
+
+    def _channel_video_url_candidates(self, channel, username):
+        return (
+            (
+                f"https://www.youtube.com/user/{username}/videos",
+                "a canonical YouTube channel URL",
+                self._canonical_channel_video_links,
+            ),
+            (
+                f"https://www.youtube.com/c/{channel}/videos",
+                "the alternate canonical YouTube channel URL",
+                self._alternate_channel_video_links,
+            ),
+        )
+
     def get_channel_videos(self, channel, limit=-1):
         self.logger.debug("Fetching videos for a channel (limit=%s)", limit)
         username = channel
-        attempts = 0
-        while attempts < 3:
-            url = f"https://www.youtube.com/user/{username}/videos"
-            self.logger.debug("Trying a canonical YouTube channel URL")
-            page = safe_metadata_get(url, timeout=10).content
-            data = str(page).split(" ")
-            item = 'href="/watch?'
-            vids = [
-                line.replace('href="', "youtube.com") for line in data if item in line
-            ]
-            if vids:
-                self.logger.debug(f"Found {len(vids)} videos")
-                x = 0
-                for vid in vids:
-                    if limit < 0 or x < limit:
-                        self.links.append(vid)
-                    x += 1
-                return
-            else:
-                url = f"https://www.youtube.com/c/{channel}/videos"
-                self.logger.debug("Trying the alternate canonical YouTube channel URL")
+        for _attempt in range(3):
+            for url, description, extract_links in self._channel_video_url_candidates(
+                channel, username
+            ):
+                self.logger.debug("Trying %s", description)
                 page = safe_metadata_get(url, timeout=10).content
-                data = str(page).split(" ")
-                item = "https://i.ytimg.com/vi/"
-                vids = []
-                for line in data:
-                    if item in line:
-                        try:
-                            match = re.search(
-                                "https://i.ytimg.com/vi/(.+?)/hqdefault.", line
-                            )
-                            if match:
-                                found = match.group(1)
-                                vid = f"https://www.youtube.com/watch?v={found}"
-                                vids.append(vid)
-                        except AttributeError:
-                            continue
+                vids = extract_links(page)
                 if vids:
                     self.logger.debug(f"Found {len(vids)} videos")
-                    x = 0
-                    for vid in vids:
-                        if limit < 0 or x < limit:
-                            self.links.append(vid)
-                        x += 1
+                    self._append_links(vids, limit)
                     return
-            attempts += 1
         self.logger.error("Could not find the requested channel")
 
     def progress_hook(self, d):

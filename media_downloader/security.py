@@ -32,8 +32,8 @@ def _private_host_allowlist() -> set[str]:
     return hosts
 
 
-def validate_media_url(url: str) -> str:
-    """Validate an HTTP(S) URL and resolve every address before network access."""
+def _validate_url_shape(url: str):
+    """Reject malformed input and enforce scheme/credential rules; return the parsed URL."""
     if not isinstance(url, str) or len(url) > 8_192 or "\x00" in url:
         raise MediaSecurityError("Invalid media URL")
     parsed = urlsplit(url.strip())
@@ -45,12 +45,17 @@ def validate_media_url(url: str) -> str:
         or parsed.password is not None
     ):
         raise MediaSecurityError("Media URLs may not contain credentials")
+    return parsed
+
+
+def _resolve_media_port(parsed) -> int:
     try:
-        port = parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
+        return parsed.port or (443 if parsed.scheme.lower() == "https" else 80)
     except ValueError as exc:
         raise MediaSecurityError("Invalid media URL port") from exc
-    host = parsed.hostname.lower().rstrip(".")
-    allowed_private = host in _private_host_allowlist()
+
+
+def _resolve_media_addresses(host: str, port: int) -> set[str]:
     try:
         addresses = {
             str(item[4][0])
@@ -60,6 +65,10 @@ def validate_media_url(url: str) -> str:
         raise MediaSecurityError("Media host could not be resolved") from exc
     if not addresses:
         raise MediaSecurityError("Media host did not resolve")
+    return addresses
+
+
+def _require_public_addresses(addresses: set[str], allowed_private: bool) -> None:
     for address in addresses:
         try:
             ip = ipaddress.ip_address(address.split("%", 1)[0])
@@ -69,6 +78,16 @@ def validate_media_url(url: str) -> str:
             ) from exc
         if not ip.is_global and not allowed_private:
             raise MediaSecurityError("Media URL resolves to a non-public address")
+
+
+def validate_media_url(url: str) -> str:
+    """Validate an HTTP(S) URL and resolve every address before network access."""
+    parsed = _validate_url_shape(url)
+    port = _resolve_media_port(parsed)
+    host = parsed.hostname.lower().rstrip(".")
+    allowed_private = host in _private_host_allowlist()
+    addresses = _resolve_media_addresses(host, port)
+    _require_public_addresses(addresses, allowed_private)
     return urlunsplit(
         (parsed.scheme.lower(), parsed.netloc, parsed.path or "/", parsed.query, "")
     )

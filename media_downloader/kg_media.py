@@ -60,6 +60,68 @@ def _media_store() -> Any | None:
         return None
 
 
+_MIME_PREFIX_TO_MEDIA_TYPE = (
+    ("audio", "audio"),
+    ("video", "video"),
+    ("image", "image"),
+)
+
+
+def _media_type_for_mime(mime: str) -> str:
+    for prefix, media_type in _MIME_PREFIX_TO_MEDIA_TYPE:
+        if mime.startswith(prefix):
+            return media_type
+    return "file"
+
+
+def _read_media_bytes(file_path: str) -> bytes | None:
+    try:
+        with open(file_path, "rb") as fh:
+            return fh.read()
+    except OSError as e:
+        logger.warning(
+            "KG media ingest: cannot read media bytes (%s)", type(e).__name__
+        )
+        return None
+
+
+def _media_extra_and_name(
+    info: dict[str, Any], source_url: str
+) -> tuple[dict[str, Any], str]:
+    extra = {k: info[k] for k in _INFO_FIELDS if info.get(k) is not None}
+    if extra.get("webpage_url"):
+        extra["webpage_url"] = public_source_url(str(extra["webpage_url"]))
+    if source_url:
+        extra["source_url"] = public_source_url(source_url)
+    name = info.get("title") or (
+        f"media-{info['id']}" if info.get("id") else "downloaded-media"
+    )
+    return extra, name
+
+
+def _store_media_bytes(
+    store: Any,
+    data: bytes,
+    media_type: str,
+    mime: str,
+    source: str,
+    name: str,
+    extra: dict[str, Any],
+) -> Any | None:
+    try:
+        return store.store_media(
+            data,
+            media_type=media_type,
+            mime_type=mime,
+            source=source,
+            name=name,
+            extra=extra,
+        )
+    except Exception as e:  # noqa: BLE001 — engine/store failure is non-fatal
+        logger.warning("Operation failed: error_type=%s", type(e).__name__)
+        return None
+
+
 def ingest_media_file(
     file_path: str | None,
     *,
@@ -82,45 +144,15 @@ def ingest_media_file(
 
     info = info or {}
     mime = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-    if mime.startswith("audio"):
-        media_type = "audio"
-    elif mime.startswith("video"):
-        media_type = "video"
-    elif mime.startswith("image"):
-        media_type = "image"
-    else:
-        media_type = "file"
+    media_type = _media_type_for_mime(mime)
 
-    try:
-        with open(file_path, "rb") as fh:
-            data = fh.read()
-    except OSError as e:
-        logger.warning(
-            "KG media ingest: cannot read media bytes (%s)", type(e).__name__
-        )
+    data = _read_media_bytes(file_path)
+    if data is None:
         return None
 
-    extra = {k: info[k] for k in _INFO_FIELDS if info.get(k) is not None}
-    if extra.get("webpage_url"):
-        extra["webpage_url"] = public_source_url(str(extra["webpage_url"]))
-    if source_url:
-        extra["source_url"] = public_source_url(source_url)
-    name = info.get("title") or (
-        f"media-{info['id']}" if info.get("id") else "downloaded-media"
-    )
+    extra, name = _media_extra_and_name(info, source_url)
 
-    try:
-        stored = store.store_media(
-            data,
-            media_type=media_type,
-            mime_type=mime,
-            source=source,
-            name=name,
-            extra=extra,
-        )
-    except Exception as e:  # noqa: BLE001 — engine/store failure is non-fatal
-        logger.warning("Operation failed: error_type=%s", type(e).__name__)
-        return None
+    stored = _store_media_bytes(store, data, media_type, mime, source, name, extra)
     if stored is None:
         return None
 
