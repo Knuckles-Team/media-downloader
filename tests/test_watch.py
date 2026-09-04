@@ -676,6 +676,9 @@ def test_collect_captions_falls_back_to_an_unrequested_language(tmp_path):
 # --------------------------------------------------------------------------- #
 # Skill authoring
 # --------------------------------------------------------------------------- #
+REVISION = "## What would change this skill\n\nA measurement of the real thing.\n"
+
+
 def _manifest(video_id="v1", title="First", lines=10, frames="present", count=4):
     return {
         "status": "success",
@@ -701,7 +704,7 @@ def test_build_skill_creates_a_valid_skill(tmp_path):
         tmp_path,
         name="My Test Skill",
         description="Does a thing. Do NOT use for other things.",
-        body="# My Test Skill\n\nWhat it teaches.\n",
+        body=f"# My Test Skill\n\nWhat it teaches.\n\n{REVISION}",
         manifest=_manifest(),
     )
     assert result["status"] == "created"
@@ -725,7 +728,7 @@ def test_build_skill_records_what_evidence_was_actually_obtained(tmp_path):
         tmp_path,
         name="thin",
         description="d",
-        body="# Thin\n",
+        body=f"# Thin\n\n{REVISION}",
         manifest=_manifest(frames="unavailable", count=0),
     )
     text = (Path(result["path"]) / "SKILL.md").read_text()
@@ -735,7 +738,8 @@ def test_build_skill_records_what_evidence_was_actually_obtained(tmp_path):
 
 def test_build_skill_appends_a_second_video(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body="# S\n\nfirst\n", manifest=_manifest()
+        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        manifest=_manifest()
     )
     result = build_skill(
         tmp_path,
@@ -756,7 +760,7 @@ def test_build_skill_appends_a_second_video(tmp_path):
 
 def test_build_skill_refuses_to_append_the_same_video_twice(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body="# S\n", manifest=_manifest()
+        tmp_path, name="s", description="d", body=f"# S\n\n{REVISION}", manifest=_manifest()
     )
     result = build_skill(
         tmp_path, name="s", body="## Again\n", manifest=_manifest(), mode="append"
@@ -768,7 +772,8 @@ def test_build_skill_refuses_to_append_the_same_video_twice(tmp_path):
 
 def test_build_skill_replace_rewrites_the_body_and_keeps_sources(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body="# S\n\nold\n", manifest=_manifest()
+        tmp_path, name="s", description="d", body=f"# S\n\nold\n\n{REVISION}",
+        manifest=_manifest()
     )
     build_skill(
         tmp_path,
@@ -780,7 +785,7 @@ def test_build_skill_replace_rewrites_the_body_and_keeps_sources(tmp_path):
     result = build_skill(
         tmp_path,
         name="s",
-        body="# S\n\nrewritten\n",
+        body=f"# S\n\nrewritten\n\n{REVISION}",
         manifest=_manifest("v2", "Second"),
         mode="replace",
     )
@@ -795,28 +800,36 @@ def test_build_skill_replace_rewrites_the_body_and_keeps_sources(tmp_path):
 
 def test_build_skill_rejects_bad_input(tmp_path):
     with pytest.raises(ValueError, match="mode"):
-        build_skill(tmp_path, name="s", body="b", manifest=_manifest(), mode="merge")
+        build_skill(tmp_path, name="s", body=REVISION, manifest=_manifest(), mode="merge")
     with pytest.raises(ValueError, match="description"):
-        build_skill(tmp_path, name="s", body="b", manifest=_manifest())
+        build_skill(tmp_path, name="s", body=REVISION, manifest=_manifest())
     with pytest.raises(ValueError, match="no skill"):
         build_skill(
-            tmp_path, name="absent", body="b", manifest=_manifest(), mode="append"
+            tmp_path, name="absent", body=REVISION, manifest=_manifest(), mode="append"
         )
     with pytest.raises(ValueError, match="letter or digit"):
-        build_skill(tmp_path, name="!!!", description="d", body="b", manifest=_manifest())
+        build_skill(
+            tmp_path, name="!!!", description="d", body=REVISION, manifest=_manifest()
+        )
 
-    build_skill(tmp_path, name="s", description="d", body="b", manifest=_manifest())
+    build_skill(tmp_path, name="s", description="d", body=REVISION, manifest=_manifest())
     with pytest.raises(ValueError, match="already exists"):
-        build_skill(tmp_path, name="s", description="d", body="b", manifest=_manifest())
+        build_skill(
+            tmp_path, name="s", description="d", body=REVISION, manifest=_manifest()
+        )
 
 
 def test_find_watch_skills_reports_what_each_skill_already_covers(tmp_path):
     assert find_watch_skills(tmp_path) == []
     assert find_watch_skills(tmp_path / "absent") == []
 
-    build_skill(tmp_path, name="a", description="d", body="# A\n", manifest=_manifest())
     build_skill(
-        tmp_path, name="b", description="d", body="# B\n", manifest=_manifest("v9")
+        tmp_path, name="a", description="d", body=f"# A\n\n{REVISION}",
+        manifest=_manifest()
+    )
+    build_skill(
+        tmp_path, name="b", description="d", body=f"# B\n\n{REVISION}",
+        manifest=_manifest("v9")
     )
     # A hand-written skill with no video provenance is not a watch skill.
     plain = tmp_path / "plain"
@@ -834,3 +847,74 @@ def test_skill_sources_tolerates_junk(tmp_path):
     broken.mkdir()
     (broken / "SKILL.md").write_text("no frontmatter here")
     assert skill_sources(broken) == []
+
+
+# --------------------------------------------------------------------------- #
+# The revision section
+# --------------------------------------------------------------------------- #
+def test_build_skill_requires_a_revision_section(tmp_path):
+    """A skill that cannot say what would change it cannot be checked later."""
+    with pytest.raises(ValueError, match="What would change this skill"):
+        build_skill(
+            tmp_path, name="s", description="d", body="# S\n\nbody\n",
+            manifest=_manifest(),
+        )
+    build_skill(
+        tmp_path, name="s", description="d", body=f"# S\n\nbody\n\n{REVISION}",
+        manifest=_manifest(),
+    )
+    with pytest.raises(ValueError, match="What would change this skill"):
+        build_skill(
+            tmp_path, name="s", body="# S\n\nrewritten\n",
+            manifest=_manifest(), mode="replace",
+        )
+
+
+def test_append_keeps_the_revision_section_last(tmp_path):
+    """Appended sections must not bury the closing assessment."""
+    build_skill(
+        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        manifest=_manifest(),
+    )
+    result = build_skill(
+        tmp_path, name="s", body="## Update\n\nsecond\n",
+        manifest=_manifest("v2"), mode="append",
+    )
+    body = (Path(result["path"]) / "SKILL.md").read_text()
+    assert body.index("first") < body.index("second") < body.index(
+        "## What would change this skill"
+    )
+    assert body.count("## What would change this skill") == 1
+
+
+def test_append_lets_a_new_source_supersede_the_assessment(tmp_path):
+    """A new source usually changes what is still missing."""
+    build_skill(
+        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        manifest=_manifest(),
+    )
+    result = build_skill(
+        tmp_path,
+        name="s",
+        body="## Update\n\nsecond\n\n## What would change this skill\n\nSomething else now.\n",
+        manifest=_manifest("v2"),
+        mode="append",
+    )
+    body = (Path(result["path"]) / "SKILL.md").read_text()
+    assert "Something else now." in body
+    assert "A measurement of the real thing." not in body
+    assert body.count("## What would change this skill") == 1
+
+
+def test_append_without_an_assessment_keeps_the_existing_one(tmp_path):
+    build_skill(
+        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        manifest=_manifest(),
+    )
+    result = build_skill(
+        tmp_path, name="s", body="## Update\n\nsecond\n",
+        manifest=_manifest("v2"), mode="append",
+    )
+    assert "A measurement of the real thing." in (
+        Path(result["path"]) / "SKILL.md"
+    ).read_text()

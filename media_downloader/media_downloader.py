@@ -637,6 +637,11 @@ def _write_manifest(bundle: Path, manifest: dict) -> dict:
 SKILL_FILENAME = "SKILL.md"
 WORKFLOW_FILENAME = "WORKFLOW.md"
 SOURCES_HEADING = "## Sources"
+# Every video-built skill has to say what evidence would revise it. Without it a
+# skill reads as settled when it is only as good as the sources it happens to
+# have, and the next video becomes a judgement call instead of a check. It is
+# kept last so appended sections never bury it.
+REVISION_HEADING = "## What would change this skill"
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -703,6 +708,23 @@ def _render_sources_section(sources: list[dict]) -> str:
             f"| {source.get('upload_date') or '-'} | {_source_evidence(source)} |"
         )
     return "\n".join(rows) + "\n"
+
+
+def _split_revision(body: str) -> tuple[str, str | None]:
+    """Split a body into its main content and its closing revision section."""
+    if REVISION_HEADING in body:
+        cut = body.index(REVISION_HEADING)
+        return body[:cut].rstrip("\n"), body[cut:].rstrip("\n")
+    return body.rstrip("\n"), None
+
+
+def _require_revision_section(body: str) -> None:
+    if REVISION_HEADING not in body:
+        raise ValueError(
+            f"the body must contain a '{REVISION_HEADING}' section naming the "
+            "evidence that would revise or overturn it - a skill that cannot say "
+            "what would change it cannot be checked against a later source"
+        )
 
 
 def _split_frontmatter(text: str) -> tuple[dict, str]:
@@ -851,6 +873,7 @@ def build_skill(
                 "sources": [source],
             },
         }
+        _require_revision_section(body)
         sources = [source]
         composed_body = body.rstrip("\n")
     else:
@@ -877,12 +900,20 @@ def build_skill(
         if description:
             frontmatter["description"] = description
         if mode == "replace":
+            _require_revision_section(body)
             composed_body = body.rstrip("\n")
         else:
             trimmed = existing_body
             if SOURCES_HEADING in trimmed:
                 trimmed = trimmed[: trimmed.index(SOURCES_HEADING)]
-            composed_body = trimmed.rstrip("\n") + "\n\n" + body.rstrip("\n")
+            existing_main, existing_revision = _split_revision(trimmed)
+            added_main, added_revision = _split_revision(body)
+            # A new source usually changes what is still missing, so its own
+            # assessment supersedes the old one; otherwise the old one stands.
+            revision = added_revision or existing_revision
+            composed_body = f"{existing_main}\n\n{added_main}".rstrip("\n")
+            if revision:
+                composed_body = f"{composed_body}\n\n{revision}"
 
     skill_dir.mkdir(parents=True, exist_ok=True)
     text = _compose_skill(frontmatter, composed_body, sources)
