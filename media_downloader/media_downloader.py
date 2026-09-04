@@ -2,6 +2,7 @@
 
 
 import argparse
+import json
 import logging
 import os
 import re
@@ -83,7 +84,7 @@ class MediaDownloader:
             self.links.append(url)
         self.links = list(dict.fromkeys(self.links))
 
-    def download_video(self, link):
+    def download_video(self, link, extra_opts=None):
         link = validate_media_url(link.strip())
         self.logger.debug("Downloading media from host %s", urlsplit(link).hostname)
         outtmpl = f"{self.download_directory}/%(uploader)s - %(title)s.%(ext)s"
@@ -119,6 +120,8 @@ class MediaDownloader:
                     "preferredquality": "320",
                 }
             ]
+        if extra_opts:
+            ydl_opts.update(extra_opts)
 
         try:
             with SafeYoutubeDL(ydl_opts) as ydl:
@@ -166,9 +169,7 @@ class MediaDownloader:
     def _canonical_channel_video_links(page_content):
         data = str(page_content).split(" ")
         item = 'href="/watch?'
-        return [
-            line.replace('href="', "youtube.com") for line in data if item in line
-        ]
+        return [line.replace('href="', "youtube.com") for line in data if item in line]
 
     @staticmethod
     def _alternate_channel_video_links(page_content):
@@ -247,6 +248,28 @@ class MediaDownloader:
             pool.close()
             pool.join()
 
+    def watch(self, link, max_frames=None, scene_threshold=None):
+        """Download a video with its captions and extract scene-change key frames.
+
+        Returns the bundle manifest described in ``media_downloader.watch``.
+        """
+        from media_downloader.watch import (
+            DEFAULT_MAX_FRAMES,
+            DEFAULT_SCENE_THRESHOLD,
+            watch_media,
+        )
+
+        return watch_media(
+            link,
+            download_directory=self.download_directory,
+            output_root=str(self.output_root),
+            max_frames=DEFAULT_MAX_FRAMES if max_frames is None else max_frames,
+            scene_threshold=(
+                DEFAULT_SCENE_THRESHOLD if scene_threshold is None else scene_threshold
+            ),
+            ingest_to_kg=self.ingest_to_kg,
+        )
+
 
 def media_downloader():
     parser = argparse.ArgumentParser(
@@ -261,6 +284,17 @@ def media_downloader():
     parser.add_argument(
         "-l", "--links", help="Comma-separated list of URLs to download"
     )
+    parser.add_argument(
+        "-w",
+        "--watch",
+        help="URL to watch: download it with captions and extract key frames",
+    )
+    parser.add_argument(
+        "--frames",
+        type=int,
+        default=None,
+        help="Maximum key frames to extract when watching (default 24)",
+    )
 
     parser.add_argument("--help", action="store_true", help="Show usage")
 
@@ -274,7 +308,9 @@ def media_downloader():
     logger.setLevel(logging.DEBUG)
 
     logger.handlers.clear()
-    handler = logging.StreamHandler(sys.stdout)
+    # Diagnostics go to stderr so stdout carries only command output (the
+    # --watch manifest is JSON and has to stay pipeable).
+    handler = logging.StreamHandler(sys.stderr)
 
     handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
@@ -293,6 +329,12 @@ def media_downloader():
     if args.links:
         url_list = args.links.replace(" ", "").split(",")
         video_downloader_instance.links.extend(url_list)
+
+    if args.watch:
+        logger.info("Watching the requested media...")
+        manifest = video_downloader_instance.watch(args.watch, max_frames=args.frames)
+        print(json.dumps(manifest, indent=2))
+        sys.exit(0 if manifest.get("status") != "error" else 1)
 
     logger.info("Kicking off downloads...")
     video_downloader_instance.download_all()

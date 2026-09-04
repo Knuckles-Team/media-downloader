@@ -114,6 +114,62 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
             logger.error("Download error (%s)", type(e).__name__)
             return {"status": "error", "message": "Download request failed"}
 
+    @mcp.tool(name="watch_media")
+    async def watch_media(
+        video_url: str = Field(description="URL of the video/media to watch"),
+        download_directory: str = Field(
+            default=".", description="Directory to save the watch bundle"
+        ),
+        max_frames: int = Field(
+            default=24, description="Maximum key frames to extract (1-200)"
+        ),
+        scene_threshold: float = Field(
+            default=0.3,
+            description="ffmpeg scene-change sensitivity; lower finds more frames",
+        ),
+        subtitle_languages: str = Field(
+            default="en,en-orig",
+            description="Comma-separated yt-dlp caption language codes",
+        ),
+        ctx: Context | None = Field(
+            default=None, description="MCP context for progress reporting"
+        ),
+    ) -> dict:
+        """Watch a video: download it with captions and extract key frames.
+
+        Returns a manifest describing a bundle on disk - the caption transcript
+        plus scene-change key frames whose filenames carry their timestamp, so
+        what was on screen can be lined up against what was said. Use this to
+        analyse a tutorial, demo, talk, or screen recording rather than merely
+        archive it.
+
+        Check `status` before trusting the bundle: `partial` means the captions
+        or the frames are missing, and `captions.fallback` then names the
+        audio-transcriber skill to recover a transcript.
+        """
+        if ctx:
+            await ctx.info("Watching the requested media URL")
+
+        try:
+            from media_downloader.watch import watch_media as run_watch
+
+            languages = tuple(
+                lang.strip() for lang in subtitle_languages.split(",") if lang.strip()
+            )
+            manifest = run_watch(
+                video_url,
+                download_directory=download_directory,
+                max_frames=max(1, min(int(max_frames), 200)),
+                scene_threshold=float(scene_threshold),
+                subtitle_langs=languages or ("en", "en-orig"),
+            )
+            if ctx:
+                await ctx.info(f"Watch complete: {manifest['status']}")
+            return manifest
+        except Exception as e:
+            logger.error("Watch error (%s)", type(e).__name__)
+            return {"status": "error", "message": "Watch request failed"}
+
     registered_tags = register_tool_surface(
         mcp,
         client_cls=MediaDownloader,

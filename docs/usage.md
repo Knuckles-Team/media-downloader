@@ -95,7 +95,18 @@ media-downloader --file urls.txt --directory ./Downloads
 
 # Every video from a channel
 media-downloader --channel "SomeChannel" --directory ./Downloads
+
+# Watch a video: captions + key frames, ready for analysis
+media-downloader --watch "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --frames 24
 ```
+
+`--watch` prints the bundle manifest as JSON on stdout (diagnostics go to
+stderr, so it pipes cleanly) and writes the same manifest into the bundle
+directory alongside `transcript.txt`, the raw `.vtt`, the media file, and
+`frames/frame_<n>_t<seconds>.jpg`. Each frame filename carries its timestamp so
+a frame can be lined up against the transcript. It exits non-zero only when the
+download itself failed; a run that is merely missing captions or ffmpeg exits 0
+with `"status": "partial"`.
 
 | Flag | Meaning |
 |---|---|
@@ -104,4 +115,6 @@ media-downloader --channel "SomeChannel" --directory ./Downloads
 | `-c`, `--channel` | Download videos from a channel |
 | `-d`, `--directory` | Target download directory |
 | `-a`, `--audio` | Download audio only (MP3) |
+| `-w`, `--watch` | Watch a URL: download it with captions and extract key frames |
+| `--frames` | Maximum key frames to extract when watching (default 24) |
 | `--help` | Show usage |

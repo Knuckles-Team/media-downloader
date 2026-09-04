@@ -25,7 +25,7 @@ test = [
     "pytest-xdist>=3.8.0", "pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0",]
 
 [project.scripts]
-media-downloader = "media_downloader.media_downloader:main"
+media-downloader = "media_downloader.media_downloader:media_downloader"
 media-downloader-mcp = "media_downloader.mcp_server:mcp_server"
 media-downloader-agent = "media_downloader.agent_server:agent_server"
 

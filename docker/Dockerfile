@@ -51,6 +51,13 @@ ENV HOST=${HOST} \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
+# ffmpeg/ffprobe are runtime dependencies, not build tools: yt-dlp shells out to
+# them for MP3 extraction, and `watch` uses them for scene detection and key-frame
+# extraction. Without them a watch run degrades to captions-only.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Slim image: MCP server only.
 # Fixed identity for least-privilege runtime and stable volume ownership.
 RUN groupadd --system --gid 10001 app \
