@@ -6,6 +6,7 @@ import hashlib
 import html
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -32,9 +33,35 @@ __version__ = "4.2.0"
 
 logger = logging.getLogger("MediaDownloader")
 
+# "best" alone selects the best *progressive* stream - one file carrying both
+# video and audio. YouTube stopped serving those for most videos, so "best" now
+# matches nothing and the download fails. yt-dlp's own default pairs the best
+# video-only and audio-only streams and merges them with ffmpeg, falling back to
+# a progressive stream where one exists.
+DEFAULT_VIDEO_FORMAT = "bv*+ba/b"
+DEFAULT_AUDIO_FORMAT = "bestaudio/best"
+# Watching only needs frames legible enough to read what is on screen, and they
+# are scaled to 1280 wide anyway, so a 720p ceiling keeps a long video from
+# pulling hundreds of megabytes for no gain.
+WATCH_VIDEO_FORMAT = "bv*[height<=720]+ba/b[height<=720]/" + DEFAULT_VIDEO_FORMAT
+
 DEFAULT_MAX_FRAMES = 24
 DEFAULT_MIN_FRAMES = 6
 DEFAULT_SCENE_THRESHOLD = 0.3
+# Scene detection alone samples badly in two ways, both seen on real footage: a
+# long static shot (a bench experiment, a slide held on screen) produces no cuts
+# and therefore no frames at all, and the highest-scoring cuts are often whip
+# pans whose frames are motion-blurred. So guarantee a frame at least this often
+# regardless of cuts, and seek slightly past each detected cut so the camera has
+# settled on the new scene rather than being caught mid-transition.
+DEFAULT_MAX_GAP_SECONDS = 120.0
+# Rather than guess where the motion stops, capture a few candidates around each
+# target and keep the one with the most edge energy. Motion blur removes
+# high-frequency detail, so a blurred frame scores far lower: measured on real
+# footage, a whip-pan frame scores ~1.6 against ~7.6-8.3 for a settled one.
+# Scene candidates all sit after the cut; coverage candidates straddle the mark.
+SCENE_CANDIDATE_OFFSETS = (0.1, 0.45, 0.8)
+COVERAGE_CANDIDATE_OFFSETS = (-0.35, 0.0, 0.35)
 # Deliberately NOT a wildcard such as "en.*": YouTube publishes an auto-translated
 # track per target language (en-ar, en-zh, en-de ...), and a wildcard requests all
 # ~32 of them, which earns an HTTP 429 partway through. "en-orig" picks up the
@@ -56,6 +83,7 @@ _CUE_RE = re.compile(
 _TAG_RE = re.compile(r"<[^>]+>")
 _PTS_RE = re.compile(r"pts_time:(\d+(?:\.\d+)?)")
 _SCORE_RE = re.compile(r"lavfi\.scene_score=(\d+(?:\.\d+)?)")
+_YAVG_RE = re.compile(r"lavfi\.signalstats\.YAVG=(\d+(?:\.\d+)?)")
 
 
 class YtDlpLogger:
@@ -281,25 +309,64 @@ def detect_scene_changes(media: Path, threshold: float) -> list[dict]:
     return candidates
 
 
+def _fill_coverage_gaps(
+    chosen: list[dict], duration: float | None, max_gap: float, budget: int
+) -> list[dict]:
+    """Add evenly spaced frames wherever the scene frames leave a long blind spot.
+
+    Spaces each gap evenly rather than bisecting it: closing a 20-minute gap to
+    2 minutes takes 9 evenly placed frames but 127 by repeated halving, so
+    bisection would exhaust the budget while leaving gaps wide open.
+    """
+    if not duration or duration <= 0 or max_gap <= 0:
+        return chosen
+    marks = [0.0] + sorted(c["timestamp_s"] for c in chosen) + [duration]
+    added: list[dict] = []
+    # Deliberately ragged: pairs consecutive marks, so the tail is dropped.
+    for start, end in zip(marks, marks[1:], strict=False):
+        span = end - start
+        if span <= max_gap:
+            continue
+        needed = math.ceil(span / max_gap) - 1
+        step = span / (needed + 1)
+        for index in range(1, needed + 1):
+            if len(chosen) + len(added) >= budget:
+                break
+            added.append(
+                {"timestamp_s": round(start + step * index, 3), "scene_score": None}
+            )
+    return sorted(chosen + added, key=lambda c: c["timestamp_s"])
+
+
 def select_timestamps(
     candidates: list[dict],
     duration: float | None,
     *,
     max_frames: int,
     min_frames: int,
+    max_gap: float = DEFAULT_MAX_GAP_SECONDS,
 ) -> tuple[list[dict], str]:
-    """Cap scene candidates to the highest-scoring ``max_frames``, chronologically.
+    """Choose which moments to capture, by scene change and by time coverage.
 
-    Keeping the top scores rather than the first ``max_frames`` matters: a long
-    tutorial's most informative screens are spread throughout, and truncating the
-    detection order would return nothing but the intro. Videos with too few
-    detected changes (a static talking head, a short clip) fall back to evenly
-    spaced timestamps so a bundle always carries some visual evidence.
+    Scene frames come first: keep the highest-scoring ``max_frames`` and restore
+    chronological order. Keeping the best scores rather than the first
+    ``max_frames`` matters, because a long tutorial's most informative screens
+    are spread throughout and truncating detection order would return only the
+    intro.
+
+    Then guarantee coverage. A static shot generates no cuts, so scene detection
+    alone can skip minutes at a time - including, on real footage, an entire
+    bench experiment whose on-screen meter readings were the point. Fill any gap
+    wider than ``max_gap`` with midpoints, up to twice the frame budget.
+
+    Videos with too few detected changes fall back to even spacing outright.
     """
     if len(candidates) >= min_frames:
         ranked = sorted(candidates, key=lambda c: c["scene_score"], reverse=True)
         chosen = sorted(ranked[:max_frames], key=lambda c: c["timestamp_s"])
-        return chosen, "scene"
+        covered = _fill_coverage_gaps(chosen, duration, max_gap, max_frames * 2)
+        mode = "scene+coverage" if len(covered) > len(chosen) else "scene"
+        return covered, mode
     if not duration or duration <= 0:
         return list(candidates), "scene"
     count = max(1, min(min_frames, max_frames))
@@ -311,43 +378,113 @@ def select_timestamps(
     return spaced, "interval"
 
 
+def frame_sharpness(frame: Path) -> float:
+    """Edge energy of a single frame - the sharpness score used to pick between
+    candidates.
+
+    Runs the frame through ffmpeg's ``edgedetect`` and averages the result, so it
+    needs no dependency beyond the ffmpeg already required. Higher is sharper;
+    motion blur removes the high-frequency detail the edge detector responds to.
+    """
+    result = _run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(frame),
+            "-vf",
+            "edgedetect,signalstats,metadata=print:file=-",
+            "-f",
+            "null",
+            "-",
+        ],
+        _PROBE_TIMEOUT,
+    )
+    match = _YAVG_RE.search(result.stdout or "")
+    return float(match.group(1)) if match else 0.0
+
+
+def _capture_frame(media: Path, seconds: float, target: Path) -> bool:
+    result = _run(
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-ss",
+            f"{max(0.0, seconds):.3f}",
+            "-i",
+            str(media),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            "-vf",
+            f"scale='min({FRAME_WIDTH},iw)':-2",
+            str(target),
+        ],
+        _FRAME_TIMEOUT,
+    )
+    return result.returncode == 0 and target.exists()
+
+
+def _sharpest_capture(
+    media: Path, offsets: tuple[float, ...], anchor: float, scratch: Path
+) -> tuple[float, float] | None:
+    """Capture each candidate around ``anchor`` and keep only the sharpest.
+
+    Returns ``(seconds, sharpness)`` for the frame left at ``scratch``.
+    """
+    best: tuple[float, float] | None = None
+    for index, offset in enumerate(offsets):
+        # The suffix has to stay .jpg: ffmpeg picks the output format from
+        # the extension, and would refuse an unknown one.
+        candidate = scratch.with_name(f"{scratch.stem}.cand{index}.jpg")
+        if not _capture_frame(media, anchor + offset, candidate):
+            continue
+        sharpness = frame_sharpness(candidate)
+        if best is None or sharpness > best[1]:
+            best = (max(0.0, anchor + offset), sharpness)
+            candidate.replace(scratch)
+        else:
+            candidate.unlink(missing_ok=True)
+    return best
+
+
 def extract_frames(media: Path, timestamps: list[dict], frames_dir: Path) -> list[dict]:
-    """Extract one JPEG per timestamp, naming each file after its position."""
+    """Extract one JPEG per target, naming each file after its position.
+
+    Each target is captured several times across a short window and only the
+    sharpest is kept, so a cut caught mid-pan does not become an unreadable
+    frame. That matters because the frames worth having are the ones showing a
+    meter, a slide, or a board - all of which are ruined by blur.
+    """
     if not timestamps:
         return []
     frames_dir.mkdir(parents=True, exist_ok=True)
     extracted: list[dict] = []
     for index, candidate in enumerate(timestamps, start=1):
-        seconds = float(candidate["timestamp_s"])
-        name = f"frame_{index:04d}_t{seconds:09.3f}.jpg"
-        target = frames_dir / name
-        result = _run(
-            [
-                "ffmpeg",
-                "-nostdin",
-                "-y",
-                "-ss",
-                f"{seconds:.3f}",
-                "-i",
-                str(media),
-                "-frames:v",
-                "1",
-                "-q:v",
-                "2",
-                "-vf",
-                f"scale='min({FRAME_WIDTH},iw)':-2",
-                str(target),
-            ],
-            _FRAME_TIMEOUT,
-        )
-        if result.returncode != 0 or not target.exists():
-            logger.debug("Key frame skipped at %.3fs", seconds)
+        anchor = float(candidate["timestamp_s"])
+        is_scene = candidate.get("scene_score") is not None
+        offsets = SCENE_CANDIDATE_OFFSETS if is_scene else COVERAGE_CANDIDATE_OFFSETS
+        scratch = frames_dir / f".frame_{index:04d}.jpg"
+        chosen = _sharpest_capture(media, offsets, anchor, scratch)
+        if chosen is None:
+            logger.debug("Key frame skipped at %.3fs", anchor)
+            scratch.unlink(missing_ok=True)
             continue
+        seconds, sharpness = chosen
+        name = f"frame_{index:04d}_t{seconds:09.3f}.jpg"
+        scratch.replace(frames_dir / name)
         extracted.append(
             {
+                # The captured time, not the detected cut: the filename and the
+                # manifest must agree with each other and with the transcript.
                 "file": f"{FRAMES_DIRNAME}/{name}",
-                "timestamp_s": seconds,
+                "timestamp_s": round(seconds, 3),
                 "scene_score": candidate.get("scene_score"),
+                "sharpness": round(sharpness, 3),
             }
         )
     return extracted
@@ -372,6 +509,7 @@ def build_frames(
     min_frames: int,
     scene_threshold: float,
     warnings: list[str],
+    max_gap: float = DEFAULT_MAX_GAP_SECONDS,
 ) -> dict:
     if not ffmpeg_available():
         warnings.append(
@@ -383,7 +521,11 @@ def build_frames(
     duration = probe_duration(media)
     candidates = detect_scene_changes(media, scene_threshold)
     chosen, mode = select_timestamps(
-        candidates, duration, max_frames=max_frames, min_frames=min_frames
+        candidates,
+        duration,
+        max_frames=max_frames,
+        min_frames=min_frames,
+        max_gap=max_gap,
     )
     items = extract_frames(media, chosen, bundle / FRAMES_DIRNAME)
     if not items:
@@ -598,6 +740,21 @@ def _bumped(version: str) -> str:
         return "0.2.0"
 
 
+def default_skills_root() -> Path:
+    """Where video-built skills live by default.
+
+    The fleet centralises operator-owned skills in one XDG location, and
+    agent-utilities owns that path - `~/.local/share/agent-utilities/skills/`,
+    overridable with `AGENT_UTILITIES_SKILLS_DIR`. Resolve it through
+    agent-utilities rather than rebuilding the path here, so this package cannot
+    drift from the rest of the fleet. Its documented flat
+    `skills/<skill>/SKILL.md` layout is what `build_skill` writes.
+    """
+    from agent_utilities.core.paths import skills_dir
+
+    return Path(skills_dir())
+
+
 def skill_sources(skill_dir: Path) -> list[dict]:
     """The videos an existing skill was built from; empty when it has none."""
     skill_file = Path(skill_dir) / SKILL_FILENAME
@@ -610,13 +767,14 @@ def skill_sources(skill_dir: Path) -> list[dict]:
     return list((frontmatter.get("metadata") or {}).get("sources") or [])
 
 
-def find_watch_skills(skills_root: str | Path) -> list[dict]:
+def find_watch_skills(skills_root: str | Path | None = None) -> list[dict]:
     """Every video-built skill under a root, with the sources each already has.
 
-    Use it to decide whether a new video extends an existing skill or starts a
-    new one, and to avoid appending the same video twice.
+    Defaults to the fleet's shared skills directory. Use it to decide whether a
+    new video extends an existing skill or starts a new one, and to avoid
+    appending the same video twice.
     """
-    root = Path(skills_root)
+    root = Path(skills_root) if skills_root is not None else default_skills_root()
     if not root.is_dir():
         return []
     found = []
@@ -635,7 +793,7 @@ def find_watch_skills(skills_root: str | Path) -> list[dict]:
 
 
 def build_skill(
-    skills_root: str | Path,
+    skills_root: str | Path | None = None,
     *,
     name: str,
     body: str,
@@ -652,6 +810,9 @@ def build_skill(
     provenance every claim has to remain traceable to, the sources table, the
     version bump, and the derived WORKFLOW.md.
 
+    Writes into the fleet's shared skills directory unless ``skills_root`` says
+    otherwise, so a skill is installed where every agent already looks for it.
+
     Modes: ``create`` writes a new skill; ``append`` adds a section for another
     video; ``replace`` rewrites the body of an existing skill, which is what a
     later video needs when it does not merely add a section but changes what the
@@ -667,7 +828,8 @@ def build_skill(
     slug = _slugify(name)
     if not slug:
         raise ValueError("skill name must contain a letter or digit")
-    skill_dir = Path(skills_root) / slug
+    root = Path(skills_root) if skills_root is not None else default_skills_root()
+    skill_dir = root / slug
     skill_file = skill_dir / SKILL_FILENAME
     source = watch_source_record(manifest)
     frontmatter: dict[str, Any]
@@ -739,6 +901,21 @@ def build_skill(
     }
 
 
+def _downloaded_path(ydl, info) -> str:
+    """The file yt-dlp actually wrote.
+
+    ``prepare_filename`` renders the template against the pre-merge extension,
+    so when separate video and audio streams are merged it can name a file that
+    was never written. yt-dlp records the real destination on the download
+    entry; prefer it, and fall back to the template only when it is absent.
+    """
+    for entry in info.get("requested_downloads") or []:
+        actual = entry.get("filepath")
+        if actual:
+            return actual
+    return ydl.prepare_filename(info)
+
+
 class MediaDownloader:
     def __init__(
         self,
@@ -788,7 +965,7 @@ class MediaDownloader:
                     self.logger.debug("Validated the embedded Rumble media URL")
 
         ydl_opts = {
-            "format": "bestaudio/best" if self.audio else "best",
+            "format": DEFAULT_AUDIO_FORMAT if self.audio else DEFAULT_VIDEO_FORMAT,
             "outtmpl": outtmpl,
             "quiet": True,
             "no_warnings": True,
@@ -812,7 +989,7 @@ class MediaDownloader:
         try:
             with SafeYoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(link, download=True)
-                path = ydl.prepare_filename(info)
+                path = _downloaded_path(ydl, info)
                 path = str(contained_output_path(path, self.output_root))
                 self._maybe_ingest(path, info, link)
                 return path
@@ -823,7 +1000,7 @@ class MediaDownloader:
                 ydl_opts["outtmpl"] = outtmpl
                 with SafeYoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(link, download=True)
-                    path = ydl.prepare_filename(info)
+                    path = _downloaded_path(ydl, info)
                     path = str(contained_output_path(path, self.output_root))
                     self._maybe_ingest(path, info, link)
                     return path
@@ -967,6 +1144,7 @@ class MediaDownloader:
                     "subtitleslangs": list(subtitle_langs),
                     "subtitlesformat": "vtt",
                     "writeinfojson": True,
+                    "format": WATCH_VIDEO_FORMAT,
                 },
             )
         finally:
