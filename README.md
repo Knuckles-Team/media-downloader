@@ -67,7 +67,9 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 
 | MCP Tool | Toggle Env Var | Description |
 |----------|----------------|-------------|
+| `build_watch_skill` | — | Write a video-built skill, or append another video's findings to one. |
 | `download_media` | — | Download video or audio from supported sites (YouTube, Rumble, etc.). |
+| `list_watch_skills` | — | List video-built skills under a root and the videos each already has. |
 | `watch_media` | — | Watch a video: download it with captions and extract key frames. |
 
 #### Verbose 1:1 API-mapped tools (`MCP_TOOL_MODE=verbose` or `both`)
@@ -87,7 +89,7 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 
 </details>
 
-_2 action-routed tool(s) · 7 verbose 1:1 tool(s). Each is enabled unless its `<DOMAIN>TOOL` toggle is set false; `MCP_TOOL_MODE` selects the surface (**`intent` default** — the six verb-tools, granular set loaded on demand · `condensed` action-routed · `verbose` 1:1 · `both`). Auto-generated — do not edit._
+_4 action-routed tool(s) · 7 verbose 1:1 tool(s). Each is enabled unless its `<DOMAIN>TOOL` toggle is set false; `MCP_TOOL_MODE` selects the surface (**`intent` default** — the six verb-tools, granular set loaded on demand · `condensed` action-routed · `verbose` 1:1 · `both`). Auto-generated — do not edit._
 <!-- MCP-TOOLS-TABLE:END -->
 
 Detailed tool schemas, parameter shapes, and validation constraints are preserved in [docs/usage.md](docs/usage.md).
