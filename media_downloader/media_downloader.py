@@ -13,8 +13,10 @@ import subprocess
 import sys
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
+import yaml
 import yt_dlp
 
 from media_downloader.security import (
@@ -173,14 +175,30 @@ def _empty_captions() -> dict:
     }
 
 
-def collect_captions(bundle: Path, info: dict) -> dict:
-    """Pick the fullest caption track in ``bundle`` and render a transcript."""
+def _track_rank(vtt: Path, preferred: tuple[str, ...]) -> tuple[int, int]:
+    """Rank a caption file: requested language order first, then fullness."""
+    language = _caption_language(vtt) or ""
+    try:
+        position = preferred.index(language)
+    except ValueError:
+        position = len(preferred)
+    return (position, -vtt.stat().st_size)
+
+
+def collect_captions(
+    bundle: Path, info: dict, preferred: tuple[str, ...] = DEFAULT_SUBTITLE_LANGS
+) -> dict:
+    """Pick the best caption track in ``bundle`` and render a transcript.
+
+    Several language variants can land at once. Choose in the order the caller
+    asked for - English first by default - rather than by file size, so the
+    transcript language is a decision and not an accident of which track
+    happened to be biggest. Fullness only breaks ties within a language.
+    """
     vtt_files = sorted(bundle.glob("*.vtt"))
     if not vtt_files:
         return _empty_captions()
-    # Several language variants can land at once; the largest carries the most
-    # cues, which is the one worth transcribing.
-    vtt = max(vtt_files, key=lambda p: (p.stat().st_size, p.name))
+    vtt = min(vtt_files, key=lambda p: _track_rank(p, preferred))
     cues = parse_vtt(vtt.read_text(encoding="utf-8", errors="replace"))
     if not cues:
         return _empty_captions()
@@ -455,9 +473,13 @@ def _add_caption_fallback(captions: dict, media_relpath: str | None) -> None:
     }
 
 
-def _overall_status(captions: dict, frames: dict) -> str:
-    complete = captions["status"] == "present" and frames["status"] == "present"
-    return "success" if complete else "partial"
+def _overall_status(captions: dict, frames: dict, media_ok: bool) -> str:
+    """`error` only when nothing at all was obtained."""
+    if not media_ok and captions["status"] == "missing":
+        return "error"
+    if captions["status"] == "present" and frames["status"] == "present":
+        return "success"
+    return "partial"
 
 
 def _write_manifest(bundle: Path, manifest: dict) -> dict:
@@ -467,21 +489,254 @@ def _write_manifest(bundle: Path, manifest: dict) -> dict:
     return manifest
 
 
-def _failed_manifest(url: str, bundle: Path | None) -> dict:
-    manifest = {
-        "status": "error",
-        "source_url": public_source_url(url),
-        "message": "Download failed; no media, captions or frames were produced.",
-        "bundle_dir": str(bundle) if bundle else None,
-        "video": {},
-        "media_file": None,
-        "captions": _empty_captions(),
-        "frames": _unavailable_frames(None, DEFAULT_SCENE_THRESHOLD),
-        "warnings": ["The media could not be downloaded."],
+# --------------------------------------------------------------------------- #
+# Skill authoring
+# --------------------------------------------------------------------------- #
+SKILL_FILENAME = "SKILL.md"
+WORKFLOW_FILENAME = "WORKFLOW.md"
+SOURCES_HEADING = "## Sources"
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    return _SLUG_RE.sub("-", (value or "").lower()).strip("-")
+
+
+def watch_source_record(manifest: dict) -> dict:
+    """Provenance for one watched video, as it is recorded inside a skill.
+
+    Carries what was actually obtained, not just the URL: a skill built from a
+    caption-only bundle must stay auditable as such once it is being read months
+    later, and a later append needs to know what the earlier pass was missing.
+    """
+    video = manifest.get("video") or {}
+    captions = manifest.get("captions") or {}
+    frames = manifest.get("frames") or {}
+    return {
+        "video_id": video.get("id"),
+        "title": video.get("title"),
+        "uploader": video.get("uploader"),
+        "upload_date": video.get("upload_date"),
+        "url": video.get("webpage_url"),
+        "watch_status": manifest.get("status"),
+        "captions": captions.get("status"),
+        "caption_source": captions.get("source"),
+        "transcript_lines": captions.get("line_count", 0),
+        "frames": frames.get("status"),
+        "frame_count": frames.get("count", 0),
     }
-    if bundle is not None:
-        return _write_manifest(bundle, manifest)
-    return manifest
+
+
+def _source_evidence(source: dict) -> str:
+    """One phrase saying what this video actually contributed."""
+    parts = []
+    if source.get("captions") == "present":
+        origin = source.get("caption_source") or "unknown"
+        parts.append(f"{source.get('transcript_lines', 0)} transcript lines ({origin})")
+    else:
+        parts.append("no transcript")
+    if source.get("frames") == "present":
+        parts.append(f"{source.get('frame_count', 0)} key frames")
+    else:
+        parts.append("no key frames")
+    return ", ".join(parts)
+
+
+def _render_sources_section(sources: list[dict]) -> str:
+    rows = [
+        SOURCES_HEADING,
+        "",
+        "Everything above comes only from these videos. Nothing else was consulted.",
+        "",
+        "| Video | Uploader | Uploaded | Evidence obtained |",
+        "|-------|----------|----------|-------------------|",
+    ]
+    for source in sources:
+        title = source.get("title") or source.get("video_id") or "unknown"
+        url = source.get("url")
+        label = f"[{title}]({url})" if url else title
+        rows.append(
+            f"| {label} | {source.get('uploader') or '-'} "
+            f"| {source.get('upload_date') or '-'} | {_source_evidence(source)} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
+def _split_frontmatter(text: str) -> tuple[dict, str]:
+    if not text.startswith("---"):
+        raise ValueError("skill file has no frontmatter")
+    _, raw, body = text.split("---", 2)
+    return yaml.safe_load(raw) or {}, body.lstrip("\n")
+
+
+def _compose_skill(frontmatter: dict, body: str, sources: list[dict]) -> str:
+    body = body.rstrip("\n")
+    if SOURCES_HEADING in body:
+        body = body[: body.index(SOURCES_HEADING)].rstrip("\n")
+    rendered = yaml.safe_dump(frontmatter, sort_keys=False, allow_unicode=True).rstrip()
+    return f"---\n{rendered}\n---\n{body}\n\n{_render_sources_section(sources)}"
+
+
+def _write_workflow(skill_dir: Path, frontmatter: dict, skill_text: str) -> None:
+    _, body = _split_frontmatter(skill_text)
+    title = body.splitlines()[0].lstrip("# ").strip()
+    description = " ".join((frontmatter.get("description") or "").split())
+    (skill_dir / WORKFLOW_FILENAME).write_text(
+        f"# {title}\n\n{description}\n\n{body}", encoding="utf-8"
+    )
+
+
+def _bumped(version: str) -> str:
+    """Minor bump: a new video adds knowledge, it does not merely patch it."""
+    parts = (version or "0.1.0").split(".")
+    while len(parts) < 3:
+        parts.append("0")
+    try:
+        return f"{int(parts[0])}.{int(parts[1]) + 1}.0"
+    except ValueError:
+        return "0.2.0"
+
+
+def skill_sources(skill_dir: Path) -> list[dict]:
+    """The videos an existing skill was built from; empty when it has none."""
+    skill_file = Path(skill_dir) / SKILL_FILENAME
+    if not skill_file.is_file():
+        return []
+    try:
+        frontmatter, _ = _split_frontmatter(skill_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return list((frontmatter.get("metadata") or {}).get("sources") or [])
+
+
+def find_watch_skills(skills_root: str | Path) -> list[dict]:
+    """Every video-built skill under a root, with the sources each already has.
+
+    Use it to decide whether a new video extends an existing skill or starts a
+    new one, and to avoid appending the same video twice.
+    """
+    root = Path(skills_root)
+    if not root.is_dir():
+        return []
+    found = []
+    for skill_file in sorted(root.glob(f"*/{SKILL_FILENAME}")):
+        sources = skill_sources(skill_file.parent)
+        if sources:
+            found.append(
+                {
+                    "name": skill_file.parent.name,
+                    "path": str(skill_file.parent),
+                    "video_ids": [s.get("video_id") for s in sources],
+                    "sources": sources,
+                }
+            )
+    return found
+
+
+def build_skill(
+    skills_root: str | Path,
+    *,
+    name: str,
+    body: str,
+    manifest: dict,
+    description: str | None = None,
+    tags: list[str] | None = None,
+    author: str = "Genius",
+    mode: str = "create",
+) -> dict:
+    """Write a new video-built skill, or append another video's findings to one.
+
+    The caller supplies ``body`` - the analysis is a reading task, not something
+    this function can derive. What it does own is the mechanics: frontmatter, the
+    provenance every claim has to remain traceable to, the sources table, the
+    version bump, and the derived WORKFLOW.md.
+
+    Modes: ``create`` writes a new skill; ``append`` adds a section for another
+    video; ``replace`` rewrites the body of an existing skill, which is what a
+    later video needs when it does not merely add a section but changes what the
+    earlier ones meant.
+
+    ``append`` refuses a video the skill already lists, so re-running a pipeline
+    cannot silently duplicate a section. ``replace`` allows a video already
+    listed, because rewriting from the same sources is the point.
+    """
+    if mode not in {"create", "append", "replace"}:
+        raise ValueError("mode must be 'create', 'append' or 'replace'")
+
+    slug = _slugify(name)
+    if not slug:
+        raise ValueError("skill name must contain a letter or digit")
+    skill_dir = Path(skills_root) / slug
+    skill_file = skill_dir / SKILL_FILENAME
+    source = watch_source_record(manifest)
+    frontmatter: dict[str, Any]
+
+    if mode == "create":
+        if skill_file.exists():
+            raise ValueError(f"skill already exists: {skill_file}")
+        if not description:
+            raise ValueError("a new skill needs a description")
+        frontmatter = {
+            "name": slug,
+            "skill_type": "skill",
+            "description": description,
+            "license": "MIT",
+            "tags": tags or ["media-downloader", "media-watch"],
+            "metadata": {
+                "author": author,
+                "version": "0.1.0",
+                "sources": [source],
+            },
+        }
+        sources = [source]
+        composed_body = body.rstrip("\n")
+    else:
+        if not skill_file.is_file():
+            raise ValueError(f"no skill to {mode}: {skill_file}")
+        frontmatter, existing_body = _split_frontmatter(
+            skill_file.read_text(encoding="utf-8")
+        )
+        metadata = frontmatter.setdefault("metadata", {})
+        sources = list(metadata.get("sources") or [])
+        known = {s.get("video_id") for s in sources}
+        if mode == "append" and source.get("video_id") and source["video_id"] in known:
+            return {
+                "status": "skipped",
+                "reason": "this video is already a source of this skill",
+                "skill": slug,
+                "path": str(skill_dir),
+                "video_id": source.get("video_id"),
+            }
+        if source.get("video_id") not in known:
+            sources.append(source)
+        metadata["sources"] = sources
+        metadata["version"] = _bumped(metadata.get("version", "0.1.0"))
+        if description:
+            frontmatter["description"] = description
+        if mode == "replace":
+            composed_body = body.rstrip("\n")
+        else:
+            trimmed = existing_body
+            if SOURCES_HEADING in trimmed:
+                trimmed = trimmed[: trimmed.index(SOURCES_HEADING)]
+            composed_body = trimmed.rstrip("\n") + "\n\n" + body.rstrip("\n")
+
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    text = _compose_skill(frontmatter, composed_body, sources)
+    skill_file.write_text(text, encoding="utf-8")
+    _write_workflow(skill_dir, frontmatter, text)
+    return {
+        "status": {"create": "created", "append": "appended", "replace": "replaced"}[
+            mode
+        ],
+        "skill": slug,
+        "path": str(skill_dir),
+        "skill_file": str(skill_file),
+        "version": frontmatter["metadata"]["version"],
+        "source_count": len(sources),
+        "video_id": source.get("video_id"),
+    }
 
 
 class MediaDownloader:
@@ -717,32 +972,53 @@ class MediaDownloader:
         finally:
             self.download_directory = previous_directory
 
-        if not media_path or not os.path.exists(media_path):
-            return _failed_manifest(link, bundle)
+        # The media and the caption tracks are separate downloads, and a site can
+        # refuse the video (rate limit, region block, DRM) after the captions have
+        # already landed. Salvage whatever arrived rather than reporting nothing.
+        media_ok = bool(media_path) and os.path.exists(media_path)
 
         warnings: list[str] = []
         info = _read_info(bundle)
-        captions = collect_captions(bundle, info)
-        media_relpath = _relative(media_path, bundle)
-        if captions["status"] == "missing":
-            _add_caption_fallback(captions, media_relpath)
+        captions = collect_captions(bundle, info, tuple(subtitle_langs))
+        media_relpath = _relative(media_path, bundle) if media_ok else None
+
+        if not media_ok:
             warnings.append(
-                "No captions were available for this media; the transcript is "
-                "missing. Transcribe it with the audio-transcriber skill before "
-                "relying on anything that was said."
+                "The media itself could not be downloaded, so no key frames were "
+                "extracted. Nothing shown on screen is available from this "
+                "bundle - work from the transcript alone and say so."
             )
 
-        frames = build_frames(
-            Path(media_path),
-            bundle,
-            max_frames=max_frames,
-            min_frames=min_frames,
-            scene_threshold=scene_threshold,
-            warnings=warnings,
+        if captions["status"] == "missing":
+            if media_relpath:
+                _add_caption_fallback(captions, media_relpath)
+                warnings.append(
+                    "No captions were available for this media; the transcript is "
+                    "missing. Transcribe it with the audio-transcriber skill "
+                    "before relying on anything that was said."
+                )
+            else:
+                warnings.append(
+                    "No captions were published and the media could not be "
+                    "downloaded, so this bundle has no transcript and no way to "
+                    "produce one."
+                )
+
+        frames = (
+            build_frames(
+                Path(media_path),
+                bundle,
+                max_frames=max_frames,
+                min_frames=min_frames,
+                scene_threshold=scene_threshold,
+                warnings=warnings,
+            )
+            if media_ok
+            else _unavailable_frames(None, scene_threshold)
         )
 
         manifest = {
-            "status": _overall_status(captions, frames),
+            "status": _overall_status(captions, frames, media_ok),
             "source_url": public_source_url(link),
             "bundle_dir": str(bundle),
             "video": _video_metadata(info),

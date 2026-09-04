@@ -50,6 +50,8 @@ still returns captions and reports `frames.status: "unavailable"`.
 | Tool | Purpose |
 |------|---------|
 | `watch_media` | Download a URL with captions + key frames; returns the bundle manifest |
+| `list_watch_skills` | What video-built skills exist and which videos each already has |
+| `build_watch_skill` | Write a new skill from a bundle, or extend an existing one |
 | `transcribe_audio` | (audio-transcriber package) fallback when captions are missing |
 
 ### Key parameters
@@ -99,6 +101,31 @@ Rules: use only what is in the frames and captions. Mark anything you inferred a
 inferred. If the download failed or the captions were missing, say so before you
 build anything.
 
+## Building and extending a skill
+
+Turning the analysis into a saved skill is a two-step job, and the split matters:
+**you write the body, `build_watch_skill` owns the mechanics** — frontmatter, the
+provenance every claim stays traceable to, the sources table, the version bump,
+and the derived `WORKFLOW.md`.
+
+Before writing, call `list_watch_skills` on the skills root. It says whether this
+video extends a skill that already exists and whether that skill already covers
+it. Then pick a mode:
+
+| Mode | Use when |
+|------|----------|
+| `create` | No existing skill covers this subject. Needs a `description`. |
+| `append` | A later video adds a section without changing what the earlier ones meant. |
+| `replace` | A later video changes the picture, and the whole body needs rewriting. Provenance is kept. |
+
+`append` refuses a video the skill already lists, so re-running is safe.
+`replace` keeps every recorded source and bumps the version like `append` does.
+
+Because provenance records what each video actually yielded — transcript lines,
+frame count, or their absence — a skill built from a caption-only bundle stays
+auditable as caption-only months later. Say so in the body too: a reader should
+not have to check the sources table to learn that nothing on screen was seen.
+
 ## Gotchas
 - `status: "partial"` means captions or frames are missing — the analysis is
   incomplete by definition, so report it rather than papering over the gap.
@@ -110,6 +137,11 @@ build anything.
   was on screen.
 - Caption language codes are not wildcards. `en.*` asks a site for every
   translated track and earns a rate-limit error; name the codes you want.
+  The default is English (`en,en-orig`), and the requested order wins over
+  track size, so the transcript language is a choice rather than an accident.
+- A site can serve the captions and then refuse the video. That is reported as
+  `partial` with `frames.status: "unavailable"` and the transcript intact -
+  not as a failure. `status: "error"` means nothing at all was obtained.
 - The bundle directory is named from a digest of the URL, so re-running the same
   URL reuses and refreshes it rather than piling up copies.
 - A video with no captions is normal for screen recordings; that is what the

@@ -22,6 +22,7 @@ Wraps the MediaDownloader class using yt-dlp to download video or audio from var
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from agent_utilities.core.config import load_config
@@ -175,6 +176,93 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
         except Exception as e:
             logger.error("Watch error (%s)", type(e).__name__)
             return {"status": "error", "message": "Watch request failed"}
+
+    @mcp.tool(name="build_watch_skill")
+    async def build_watch_skill(
+        skills_root: str = Field(
+            description="Directory the skill lives in (one subdirectory per skill)"
+        ),
+        name: str = Field(description="Skill name; becomes the directory name"),
+        body: str = Field(
+            description=(
+                "The markdown body you wrote from the bundle, starting with a "
+                "'# Title' heading. Do not include a Sources section - it is "
+                "generated from the manifest."
+            )
+        ),
+        manifest_path: str = Field(
+            description="Path to the watch bundle's manifest.json, for provenance"
+        ),
+        description: str = Field(
+            default="", description="Skill description; required when creating"
+        ),
+        mode: str = Field(
+            default="create",
+            description="'create' a new skill, 'append' a video's findings, or 'replace' the body",
+        ),
+        tags: str = Field(default="", description="Comma-separated frontmatter tags"),
+        ctx: Context | None = Field(
+            default=None, description="MCP context for progress reporting"
+        ),
+    ) -> dict:
+        """Write a video-built skill, or append another video's findings to one.
+
+        You supply the body - reading the transcript and frames is your job, not
+        this tool's. It owns the mechanics: frontmatter, the provenance table
+        every claim stays traceable to, the version bump, and WORKFLOW.md.
+
+        Appending a video the skill already lists is refused rather than
+        duplicated, so re-running a pipeline is safe. Call `list_watch_skills`
+        first to see which skill a new video belongs to.
+        """
+        if ctx:
+            await ctx.info(f"Writing skill '{name}' ({mode})")
+
+        try:
+            import json as _json
+
+            from media_downloader.media_downloader import build_skill
+
+            manifest = _json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+            return build_skill(
+                skills_root,
+                name=name,
+                body=body,
+                manifest=manifest,
+                description=description or None,
+                tags=[t.strip() for t in tags.split(",") if t.strip()] or None,
+                mode=mode,
+            )
+        except ValueError as e:
+            # Caller-correctable: wrong mode, missing description, skill exists.
+            logger.error("Skill build rejected (%s)", type(e).__name__)
+            return {"status": "error", "message": str(e)}
+        except Exception as e:
+            logger.error("Skill build error (%s)", type(e).__name__)
+            return {"status": "error", "message": "Skill build failed"}
+
+    @mcp.tool(name="list_watch_skills")
+    async def list_watch_skills(
+        skills_root: str = Field(description="Directory holding video-built skills"),
+        ctx: Context | None = Field(
+            default=None, description="MCP context for progress reporting"
+        ),
+    ) -> dict:
+        """List video-built skills under a root and the videos each already has.
+
+        Use it before building: it says whether a new video extends an existing
+        skill and whether that skill already covers it.
+        """
+        if ctx:
+            await ctx.info("Listing video-built skills")
+        try:
+            from media_downloader.media_downloader import find_watch_skills
+
+            skills = find_watch_skills(skills_root)
+            return {"status": "success", "count": len(skills), "skills": skills}
+        except Exception as e:
+            logger.error("Skill listing error (%s)", type(e).__name__)
+            return {"status": "error", "message": "Skill listing failed"}
 
     registered_tags = register_tool_surface(
         mcp,

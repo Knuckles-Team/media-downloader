@@ -1485,6 +1485,7 @@ version = "4.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-utilities" },
+    { name = "pyyaml" },
     { name = "yt-dlp", extra = ["default"] },
 ]
 
@@ -1520,6 +1521,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.4.0" },
     { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=7.1.0" },
     { name = "pytest-xdist", marker = "extra == 'test'", specifier = ">=3.8.0" },
+    { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "yt-dlp", extras = ["default"], specifier = ">=2026.7.4" },
 ]
 provides-extras = ["mcp", "agent", "all", "test"]
