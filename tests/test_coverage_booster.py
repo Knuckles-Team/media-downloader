@@ -715,12 +715,14 @@ def test_media_downloader_main_block():
 
 
 @pytest.mark.asyncio
-@patch("media_downloader.watch.watch_media")
-async def test_mcp_tool_watch_media_success(mock_watch):
+@patch("media_downloader.media_downloader.MediaDownloader")
+async def test_mcp_tool_watch_media_success(mock_downloader_class):
     mcp, _, _, _ = get_mcp_instance()
     watch_tool = await mcp.get_tool("watch_media")
 
-    mock_watch.return_value = {"status": "partial", "frames": {"count": 3}}
+    mock_instance = MagicMock()
+    mock_instance.watch.return_value = {"status": "partial", "frames": {"count": 3}}
+    mock_downloader_class.return_value = mock_instance
     mock_ctx = AsyncMock(spec=Context)
 
     result = await watch_tool.fn(
@@ -734,18 +736,25 @@ async def test_mcp_tool_watch_media_success(mock_watch):
 
     assert result == {"status": "partial", "frames": {"count": 3}}
     mock_ctx.info.assert_called_with("Watch complete: partial")
-    kwargs = mock_watch.call_args.kwargs
+    mock_downloader_class.assert_called_once_with(
+        links=["https://youtube.com/watch?v=123"],
+        download_directory="/tmp/downloads",
+    )
+    kwargs = mock_instance.watch.call_args.kwargs
     assert kwargs["max_frames"] == 12
     assert kwargs["scene_threshold"] == 0.4
     assert kwargs["subtitle_langs"] == ("en", "fr")
 
 
 @pytest.mark.asyncio
-@patch("media_downloader.watch.watch_media")
-async def test_mcp_tool_watch_media_clamps_frame_count(mock_watch):
+@patch("media_downloader.media_downloader.MediaDownloader")
+async def test_mcp_tool_watch_media_clamps_frame_count(mock_downloader_class):
     mcp, _, _, _ = get_mcp_instance()
     watch_tool = await mcp.get_tool("watch_media")
-    mock_watch.return_value = {"status": "success"}
+
+    mock_instance = MagicMock()
+    mock_instance.watch.return_value = {"status": "success"}
+    mock_downloader_class.return_value = mock_instance
 
     # Every Field(default=...) parameter is a FieldInfo on the raw .fn path, so
     # each one has to be supplied explicitly.
@@ -758,17 +767,21 @@ async def test_mcp_tool_watch_media_clamps_frame_count(mock_watch):
     }
 
     await watch_tool.fn(max_frames=9999, **common)
-    assert mock_watch.call_args.kwargs["max_frames"] == 200
+    assert mock_instance.watch.call_args.kwargs["max_frames"] == 200
 
     await watch_tool.fn(max_frames=0, **common)
-    assert mock_watch.call_args.kwargs["max_frames"] == 1
+    assert mock_instance.watch.call_args.kwargs["max_frames"] == 1
 
 
 @pytest.mark.asyncio
-@patch("media_downloader.watch.watch_media", side_effect=RuntimeError("boom"))
-async def test_mcp_tool_watch_media_hides_exception_detail(_mock_watch):
+@patch("media_downloader.media_downloader.MediaDownloader")
+async def test_mcp_tool_watch_media_hides_exception_detail(mock_downloader_class):
     mcp, _, _, _ = get_mcp_instance()
     watch_tool = await mcp.get_tool("watch_media")
+
+    mock_instance = MagicMock()
+    mock_instance.watch.side_effect = RuntimeError("boom")
+    mock_downloader_class.return_value = mock_instance
 
     result = await watch_tool.fn(
         video_url="https://youtube.com/watch?v=123",
@@ -780,6 +793,6 @@ async def test_mcp_tool_watch_media_hides_exception_detail(_mock_watch):
     )
 
     # The RuntimeError must be what was swallowed, not an argument-handling slip.
-    _mock_watch.assert_called_once()
+    mock_instance.watch.assert_called_once()
     assert result == {"status": "error", "message": "Watch request failed"}
     assert "boom" not in str(result)

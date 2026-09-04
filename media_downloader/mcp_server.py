@@ -151,17 +151,23 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
             await ctx.info("Watching the requested media URL")
 
         try:
-            from media_downloader.watch import watch_media as run_watch
+            from media_downloader.media_downloader import (
+                DEFAULT_SUBTITLE_LANGS,
+                MediaDownloader,
+            )
 
             languages = tuple(
                 lang.strip() for lang in subtitle_languages.split(",") if lang.strip()
             )
-            manifest = run_watch(
-                video_url,
+            downloader = MediaDownloader(
+                links=[video_url],
                 download_directory=download_directory,
+            )
+            manifest = downloader.watch(
+                video_url,
                 max_frames=max(1, min(int(max_frames), 200)),
                 scene_threshold=float(scene_threshold),
-                subtitle_langs=languages or ("en", "en-orig"),
+                subtitle_langs=languages or DEFAULT_SUBTITLE_LANGS,
             )
             if ctx:
                 await ctx.info(f"Watch complete: {manifest['status']}")

@@ -12,7 +12,8 @@ from unittest.mock import patch
 import pytest
 
 from media_downloader.security import MediaSecurityError
-from media_downloader.watch import (
+from media_downloader.media_downloader import (
+    MediaDownloader,
     build_frames,
     collect_captions,
     detect_scene_changes,
@@ -20,7 +21,6 @@ from media_downloader.watch import (
     parse_vtt,
     probe_duration,
     select_timestamps,
-    watch_media,
     write_transcript,
 )
 
@@ -178,7 +178,7 @@ FFMPEG_STDERR = """\
 """
 
 
-@patch("media_downloader.watch._run")
+@patch("media_downloader.media_downloader._run")
 def test_detect_scene_changes_parses_ffmpeg_metadata(mock_run):
     mock_run.return_value = subprocess.CompletedProcess([], 0, "", FFMPEG_STDERR)
     found = detect_scene_changes(Path("/tmp/x.mp4"), 0.3)
@@ -188,19 +188,19 @@ def test_detect_scene_changes_parses_ffmpeg_metadata(mock_run):
     ]
 
 
-@patch("media_downloader.watch._run")
+@patch("media_downloader.media_downloader._run")
 def test_detect_scene_changes_survives_empty_output(mock_run):
     mock_run.return_value = subprocess.CompletedProcess([], 1, "", "")
     assert detect_scene_changes(Path("/tmp/x.mp4"), 0.3) == []
 
 
-@patch("media_downloader.watch._run")
+@patch("media_downloader.media_downloader._run")
 def test_probe_duration_returns_none_on_unparseable_output(mock_run):
     mock_run.return_value = subprocess.CompletedProcess([], 1, "N/A", "")
     assert probe_duration(Path("/tmp/x.mp4")) is None
 
 
-@patch("media_downloader.watch._run")
+@patch("media_downloader.media_downloader._run")
 def test_extract_frames_names_files_after_their_timestamp(mock_run, tmp_path):
     frames_dir = tmp_path / "frames"
 
@@ -224,7 +224,7 @@ def test_extract_frames_names_files_after_their_timestamp(mock_run, tmp_path):
     assert (frames_dir / "frame_0001_t00012.480.jpg").exists()
 
 
-@patch("media_downloader.watch._run")
+@patch("media_downloader.media_downloader._run")
 def test_extract_frames_skips_a_failed_seek(mock_run, tmp_path):
     mock_run.return_value = subprocess.CompletedProcess([], 1, "", "boom")
     items = extract_frames(
@@ -239,7 +239,7 @@ def test_extract_frames_makes_no_directory_without_timestamps(tmp_path):
     assert not frames_dir.exists()
 
 
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
 def test_build_frames_degrades_without_ffmpeg(_mock_available, tmp_path):
     """A missing encoder must warn, not raise: captions are still worth having."""
     warnings: list[str] = []
@@ -256,10 +256,10 @@ def test_build_frames_degrades_without_ffmpeg(_mock_available, tmp_path):
     assert any("ffmpeg" in w for w in warnings)
 
 
-@patch("media_downloader.watch.extract_frames", return_value=[])
-@patch("media_downloader.watch.detect_scene_changes", return_value=[])
-@patch("media_downloader.watch.probe_duration", return_value=None)
-@patch("media_downloader.watch.ffmpeg_available", return_value=True)
+@patch("media_downloader.media_downloader.extract_frames", return_value=[])
+@patch("media_downloader.media_downloader.detect_scene_changes", return_value=[])
+@patch("media_downloader.media_downloader.probe_duration", return_value=None)
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=True)
 def test_build_frames_reports_when_nothing_was_extracted(
     _available, _duration, _detect, _extract, tmp_path
 ):
@@ -277,68 +277,80 @@ def test_build_frames_reports_when_nothing_was_extracted(
 
 
 # --------------------------------------------------------------------------- #
-# watch_media
 # --------------------------------------------------------------------------- #
-class FakeDownloader:
-    """Stands in for MediaDownloader: writes a media file, optional captions."""
+# MediaDownloader.watch
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def downloader(tmp_path):
+    """A real MediaDownloader rooted at tmp_path, with URL validation stubbed."""
+    with patch(
+        "media_downloader.media_downloader.validate_media_url", side_effect=lambda u: u
+    ):
+        yield MediaDownloader(
+            links=[],
+            download_directory=str(tmp_path),
+            output_root=str(tmp_path),
+            ingest_to_kg=False,
+        )
 
-    instances: list["FakeDownloader"] = []
 
-    def __init__(self, links=None, download_directory=None, **kwargs):
-        self.output_root = Path(download_directory).resolve()
-        self.download_directory = str(self.output_root)
-        self.last_kg_asset = None
-        self.captions = ROLLUP_VTT
-        self.fail = False
-        self.extra_opts: dict | None = None
-        FakeDownloader.instances.append(self)
+def _stub_download(downloader, *, captions=ROLLUP_VTT, fail=False):
+    """Replace download_video with one writing into whatever bundle is current."""
+    state: dict = {"extra_opts": None, "directory": None}
 
-    def download_video(self, link, extra_opts=None):
-        self.extra_opts = extra_opts
-        if self.fail:
+    def _download(link, extra_opts=None):
+        state["extra_opts"] = extra_opts
+        state["directory"] = downloader.download_directory
+        if fail:
             return None
-        bundle = Path(self.download_directory)
+        bundle = Path(downloader.download_directory)
         media = bundle / "Author - Title.mp4"
         media.write_bytes(b"video")
         (bundle / "Author - Title.info.json").write_text(
             json.dumps({"id": "abc123", "title": "Title", "uploader": "Author"})
         )
-        if self.captions:
-            (bundle / "Author - Title.en.vtt").write_text(self.captions)
+        if captions:
+            (bundle / "Author - Title.en.vtt").write_text(captions)
         return str(media)
 
-
-@pytest.fixture
-def fake_downloader(tmp_path):
-    FakeDownloader.instances.clear()
-    with patch("media_downloader.watch.validate_media_url", side_effect=lambda u: u):
-        with patch(
-            "media_downloader.media_downloader.MediaDownloader", FakeDownloader
-        ):
-            yield
+    downloader.download_video = _download
+    return state
 
 
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_writes_a_manifest(_available, tmp_path):
-    manifest = watch_media("https://example.com/v", download_directory=str(tmp_path))
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_writes_a_manifest(_available, downloader, tmp_path):
+    _stub_download(downloader)
+    manifest = downloader.watch("https://example.com/v")
+
     bundle = Path(manifest["bundle_dir"])
     assert bundle.parent == tmp_path.resolve()
     assert bundle.name.startswith("watch-")
-    on_disk = json.loads((bundle / "manifest.json").read_text())
-    assert on_disk == manifest
+    assert json.loads((bundle / "manifest.json").read_text()) == manifest
     assert manifest["video"]["id"] == "abc123"
     assert manifest["media_file"] == "Author - Title.mp4"
     assert manifest["source_url"] == "https://example.com"
 
 
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_requests_captions_and_metadata(
-    _available, tmp_path
-):
-    watch_media("https://example.com/v", download_directory=str(tmp_path))
-    opts = FakeDownloader.instances[0].extra_opts
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_downloads_into_the_bundle_then_restores(_available, downloader, tmp_path):
+    """Watching twice must not nest one bundle inside the last one."""
+    state = _stub_download(downloader)
+    first = downloader.watch("https://example.com/v")
+
+    assert state["directory"] == first["bundle_dir"], "download ran inside the bundle"
+    assert downloader.download_directory == str(tmp_path.resolve()), "restored after"
+
+    second = downloader.watch("https://example.com/v")
+    assert second["bundle_dir"] == first["bundle_dir"]
+    assert Path(second["bundle_dir"]).parent == tmp_path.resolve()
+
+
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_requests_captions_and_metadata(_available, downloader):
+    state = _stub_download(downloader)
+    downloader.watch("https://example.com/v")
+
+    opts = state["extra_opts"]
     assert opts is not None
     assert opts["writesubtitles"] is True
     assert opts["writeautomaticsub"] is True
@@ -348,34 +360,20 @@ def test_watch_media_requests_captions_and_metadata(
     assert all("*" not in lang for lang in opts["subtitleslangs"])
 
 
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_is_partial_when_frames_are_unavailable(
-    _available, tmp_path
-):
-    manifest = watch_media("https://example.com/v", download_directory=str(tmp_path))
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_is_partial_when_frames_are_unavailable(_available, downloader):
+    _stub_download(downloader)
+    manifest = downloader.watch("https://example.com/v")
     assert manifest["status"] == "partial"
     assert manifest["captions"]["status"] == "present"
     assert manifest["frames"]["status"] == "unavailable"
 
 
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_bridges_to_audio_transcriber_without_captions(
-    _available, tmp_path
-):
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_bridges_to_audio_transcriber_without_captions(_available, downloader):
     """No captions must name the fallback rather than silently transcribe."""
-    FakeDownloader.instances.clear()
-
-    class NoCaptions(FakeDownloader):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.captions = ""
-
-    with patch("media_downloader.media_downloader.MediaDownloader", NoCaptions):
-        manifest = watch_media(
-            "https://example.com/v", download_directory=str(tmp_path)
-        )
+    _stub_download(downloader, captions="")
+    manifest = downloader.watch("https://example.com/v")
 
     captions = manifest["captions"]
     assert manifest["status"] == "partial"
@@ -388,117 +386,86 @@ def test_watch_media_bridges_to_audio_transcriber_without_captions(
     assert any("audio-transcriber" in w for w in manifest["warnings"])
 
 
-@patch("media_downloader.watch.extract_frames")
-@patch("media_downloader.watch.detect_scene_changes")
-@patch("media_downloader.watch.probe_duration", return_value=60.0)
-@patch("media_downloader.watch.ffmpeg_available", return_value=True)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_succeeds_with_captions_and_frames(
-    _available, _duration, mock_detect, mock_extract, tmp_path
+@patch("media_downloader.media_downloader.extract_frames")
+@patch("media_downloader.media_downloader.detect_scene_changes")
+@patch("media_downloader.media_downloader.probe_duration", return_value=60.0)
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=True)
+def test_watch_succeeds_with_captions_and_frames(
+    _available, _duration, mock_detect, mock_extract, downloader
 ):
+    _stub_download(downloader)
     mock_detect.return_value = _candidates(20)
     mock_extract.return_value = [
-        {"file": "frames/frame_0001_t00002.000.jpg", "timestamp_s": 2.0,
-         "scene_score": 0.9}
+        {
+            "file": "frames/frame_0001_t00002.000.jpg",
+            "timestamp_s": 2.0,
+            "scene_score": 0.9,
+        }
     ]
-    manifest = watch_media(
-        "https://example.com/v", download_directory=str(tmp_path), max_frames=1
-    )
+    manifest = downloader.watch("https://example.com/v", max_frames=1)
+
     assert manifest["status"] == "success"
     assert manifest["frames"]["mode"] == "scene"
     assert manifest["frames"]["count"] == 1
     assert manifest["warnings"] == []
 
 
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_reports_a_failed_download(tmp_path):
-    class Failing(FakeDownloader):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.fail = True
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_carries_the_kg_asset_when_one_was_ingested(_available, downloader):
+    _stub_download(downloader)
+    downloader.last_kg_asset = {"asset_id": "a1", "digest": "d1"}
+    manifest = downloader.watch("https://example.com/v")
+    assert manifest["kg_asset"] == {"asset_id": "a1", "digest": "d1"}
 
-    with patch("media_downloader.media_downloader.MediaDownloader", Failing):
-        manifest = watch_media(
-            "https://example.com/v", download_directory=str(tmp_path)
-        )
+
+def test_watch_reports_a_failed_download(downloader):
+    _stub_download(downloader, fail=True)
+    manifest = downloader.watch("https://example.com/v")
+
     assert manifest["status"] == "error"
     assert manifest["media_file"] is None
     assert manifest["captions"]["status"] == "missing"
-    assert json.loads(
-        (Path(manifest["bundle_dir"]) / "manifest.json").read_text()
-    ) == manifest
+    assert (
+        json.loads((Path(manifest["bundle_dir"]) / "manifest.json").read_text())
+        == manifest
+    )
 
 
-def test_watch_media_rejects_a_bundle_outside_the_output_root(tmp_path):
-    """Path containment is the boundary every written file has to cross."""
-
-    class Escaping(FakeDownloader):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.output_root = Path(tmp_path / "elsewhere").resolve()
-
-    with patch("media_downloader.watch.validate_media_url", side_effect=lambda u: u):
-        with patch("media_downloader.media_downloader.MediaDownloader", Escaping):
-            with pytest.raises(MediaSecurityError):
-                watch_media("https://example.com/v", download_directory=str(tmp_path))
-
-
-@patch("media_downloader.watch.ffmpeg_available", return_value=False)
-@pytest.mark.usefixtures("fake_downloader")
-def test_watch_media_reuses_the_bundle_for_the_same_url(
-    _available, tmp_path
-):
-    first = watch_media("https://example.com/v", download_directory=str(tmp_path))
-    second = watch_media("https://example.com/v", download_directory=str(tmp_path))
-    other = watch_media("https://example.com/w", download_directory=str(tmp_path))
-    assert first["bundle_dir"] == second["bundle_dir"]
+@patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
+def test_watch_gives_a_different_bundle_to_a_different_url(_available, downloader):
+    _stub_download(downloader)
+    first = downloader.watch("https://example.com/v")
+    other = downloader.watch("https://example.com/w")
     assert other["bundle_dir"] != first["bundle_dir"]
 
 
-def test_watch_media_validates_the_url_before_writing_anything(tmp_path):
+def test_watch_rejects_a_bundle_outside_the_output_root(downloader, tmp_path):
+    """Path containment is the boundary every written file has to cross."""
+    downloader.output_root = (tmp_path / "elsewhere").resolve()
+    with pytest.raises(MediaSecurityError):
+        downloader.watch("https://example.com/v")
+
+
+def test_watch_validates_the_url_before_writing_anything(tmp_path):
+    instance = MediaDownloader(
+        links=[],
+        download_directory=str(tmp_path),
+        output_root=str(tmp_path),
+        ingest_to_kg=False,
+    )
     with patch(
-        "media_downloader.watch.validate_media_url",
+        "media_downloader.media_downloader.validate_media_url",
         side_effect=MediaSecurityError("nope"),
     ):
         with pytest.raises(MediaSecurityError):
-            watch_media("http://10.0.0.1/x", download_directory=str(tmp_path))
+            instance.watch("http://10.0.0.1/x")
     assert list(tmp_path.iterdir()) == []
 
 
+# download_video extra_opts seam
 # --------------------------------------------------------------------------- #
-# MediaDownloader.watch delegation
-# --------------------------------------------------------------------------- #
-@patch("media_downloader.watch.watch_media")
-def test_downloader_watch_delegates(mock_watch, tmp_path):
-    from media_downloader.media_downloader import MediaDownloader
-
-    mock_watch.return_value = {"status": "success"}
-    downloader = MediaDownloader(
-        links=[], download_directory=str(tmp_path), output_root=str(tmp_path)
-    )
-    assert downloader.watch("https://example.com/v", max_frames=3) == {
-        "status": "success"
-    }
-    kwargs = mock_watch.call_args.kwargs
-    assert kwargs["max_frames"] == 3
-    assert kwargs["scene_threshold"] == 0.3
-
-
-@patch("media_downloader.watch.watch_media", return_value={})
-def test_downloader_watch_applies_defaults(mock_watch, tmp_path):
-    from media_downloader.media_downloader import MediaDownloader
-
-    downloader = MediaDownloader(
-        links=[], download_directory=str(tmp_path), output_root=str(tmp_path)
-    )
-    downloader.watch("https://example.com/v")
-    assert mock_watch.call_args.kwargs["max_frames"] == 24
-
-
 def test_download_video_merges_extra_opts(tmp_path):
     """extra_opts is the seam the watch pipeline rides on."""
-    from media_downloader.media_downloader import MediaDownloader
-
     downloader = MediaDownloader(
         links=[], download_directory=str(tmp_path), output_root=str(tmp_path)
     )
@@ -534,8 +501,6 @@ def test_download_video_merges_extra_opts(tmp_path):
 
 
 def test_download_video_without_extra_opts_is_unchanged(tmp_path):
-    from media_downloader.media_downloader import MediaDownloader
-
     downloader = MediaDownloader(
         links=[], download_directory=str(tmp_path), output_root=str(tmp_path)
     )
