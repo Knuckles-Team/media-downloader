@@ -7,7 +7,11 @@
         "media-downloader-mcp"
       ],
       "env": {
-        "MCP_TOOL_MODE": "intent"
+        "MCP_TOOL_MODE": "intent",
+        "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
+        "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
+        "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
+        "WORKSPACE_PATH": "/workspace"
       }
     }
   }

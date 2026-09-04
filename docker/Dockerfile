@@ -28,12 +28,12 @@ RUN apt-get update \
 # Slim MCP-only dependency closure.
 FROM builder-base AS builder-mcp
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --break-system-packages media-downloader[mcp]==4.1.0
+    uv pip install --system --break-system-packages media-downloader[mcp]==4.2.0
 
 # Full agent runtime dependency closure.
 FROM builder-base AS builder-agent
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --break-system-packages media-downloader[agent]==4.1.0
+    uv pip install --system --break-system-packages media-downloader[agent]==4.2.0
 
 FROM python:3.14-slim@sha256:cea0e6040540fb2b965b6e7fb5ffa00871e632eef63719f0ea54bca189ce14a6 AS runtime-base
 ARG HOST=127.0.0.1
@@ -50,6 +50,13 @@ ENV HOST=${HOST} \
     UV_SYSTEM_PYTHON=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
+
+# ffmpeg/ffprobe are runtime dependencies, not build tools: yt-dlp shells out to
+# them for MP3 extraction, and `watch` uses them for scene detection and key-frame
+# extraction. Without them a watch run degrades to captions-only.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 # Slim image: MCP server only.
 # Fixed identity for least-privilege runtime and stable volume ownership.

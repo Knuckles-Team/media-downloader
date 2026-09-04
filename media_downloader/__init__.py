@@ -51,9 +51,7 @@ _AVAILABILITY_MARKERS = {
 
 def _optional_module_available(marker_substring: str) -> bool:
     """Resolve one of the ``_*_AVAILABLE`` dynamic flags without eager imports."""
-    module_name = next(
-        (k for k in OPTIONAL_MODULES if marker_substring in k), None
-    )
+    module_name = next((k for k in OPTIONAL_MODULES if marker_substring in k), None)
     if module_name is None:
         return False
     return _import_module_safely(module_name) is not None

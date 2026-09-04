@@ -20,7 +20,7 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 4.1.0*
+*Version: 4.2.0*
 
 > **Documentation** — Installation, deployment, and usage across the CLI, Python API,
 > MCP, and A2A agent interfaces are maintained in the
@@ -63,16 +63,17 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 
 <!-- MCP-TOOLS-TABLE:START -->
 
-#### Condensed action-routed tools (default — `MCP_TOOL_MODE=condensed`)
+#### Condensed action-routed tools (`MCP_TOOL_MODE=condensed`)
 
 | MCP Tool | Toggle Env Var | Description |
 |----------|----------------|-------------|
 | `download_media` | — | Download video or audio from supported sites (YouTube, Rumble, etc.). |
+| `watch_media` | — | Watch a video: download it with captions and extract key frames. |
 
 #### Verbose 1:1 API-mapped tools (`MCP_TOOL_MODE=verbose` or `both`)
 
 <details>
-<summary>6 per-operation tools — one per public API method (click to expand)</summary>
+<summary>7 per-operation tools — one per public API method (click to expand)</summary>
 
 | MCP Tool | Toggle Env Var | Description |
 |----------|----------------|-------------|
@@ -82,10 +83,11 @@ This server utilizes dynamic Action-Routed tools to optimize token overhead and 
 | `media_downloader_open_file` | `MEDIA_DOWNLOADERTOOL` | Invoke the open_file operation. |
 | `media_downloader_progress_hook` | `MEDIA_DOWNLOADERTOOL` | Invoke the progress_hook operation. |
 | `media_downloader_set_progress_callback` | `MEDIA_DOWNLOADERTOOL` | Invoke the set_progress_callback operation. |
+| `media_downloader_watch` | `MEDIA_DOWNLOADERTOOL` | Download a video with its captions and extract scene-change key frames. |
 
 </details>
 
-_1 action-routed tool(s) (default) · 6 verbose 1:1 tool(s). Each is enabled unless its `<DOMAIN>TOOL` toggle is set false; `MCP_TOOL_MODE` selects the surface (`condensed` default · `verbose` 1:1 · `both`). Auto-generated — do not edit._
+_2 action-routed tool(s) · 7 verbose 1:1 tool(s). Each is enabled unless its `<DOMAIN>TOOL` toggle is set false; `MCP_TOOL_MODE` selects the surface (**`intent` default** — the six verb-tools, granular set loaded on demand · `condensed` action-routed · `verbose` 1:1 · `both`). Auto-generated — do not edit._
 <!-- MCP-TOOLS-TABLE:END -->
 
 Detailed tool schemas, parameter shapes, and validation constraints are preserved in [docs/usage.md](docs/usage.md).
@@ -133,7 +135,11 @@ When query strings or parameters are supplied, an LLM-free **Knowledge Graph res
         "media-downloader-mcp"
       ],
       "env": {
-        "MCP_TOOL_MODE": "intent"
+        "MCP_TOOL_MODE": "intent",
+        "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
+        "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
+        "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
+        "WORKSPACE_PATH": "/workspace"
       }
     }
   }
@@ -164,7 +170,11 @@ own runtime secret boundary.
         "TRANSPORT": "streamable-http",
         "HOST": "127.0.0.1",
         "PORT": "8000",
-        "MCP_TOOL_MODE": "intent"
+        "MCP_TOOL_MODE": "intent",
+        "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
+        "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
+        "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
+        "WORKSPACE_PATH": "/workspace"
       }
     }
   }
@@ -195,6 +205,10 @@ docker run -i --rm \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
   -e TRANSPORT=stdio \
   -e MCP_TOOL_MODE=intent \
+  -e MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS=media.internal.example \
+  -e MEDIA_DOWNLOADER_MAX_WORKERS=4 \
+  -e MEDIA_DOWNLOADER_OUTPUT_ROOT=/data/media \
+  -e WORKSPACE_PATH=/workspace \
   registry.example.invalid/media-downloader@sha256:<digest> media-downloader-mcp
 ```
 
@@ -336,14 +350,18 @@ Built directly upon the enterprise-ready [`agent-utilities`](https://github.com/
 | `TRANSPORT` | `stdio` | options: stdio, streamable-http, sse |
 | `ENABLE_OTEL` | `True` |  |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:8080/api/public/otel` |  |
-| `OTEL_EXPORTER_OTLP_PUBLIC_KEY` | secret-injected |  |
-| `OTEL_EXPORTER_OTLP_SECRET_KEY` | secret-injected |  |
+| `OTEL_EXPORTER_OTLP_PUBLIC_KEY_REF` | `pk-...` |  |
+| `OTEL_EXPORTER_OTLP_SECRET_KEY_REF` | `sk-...` |  |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` |  |
 | `EUNOMIA_TYPE` | `none` | options: none, embedded, remote |
 | `EUNOMIA_POLICY_FILE` | `mcp_policies.json` |  |
 | `EUNOMIA_REMOTE_URL` | `http://eunomia-server:8000` |  |
 | `MEDIA_DOWNLOADER_MCP_IMAGE` | `knucklessg1/media-downloader@sha256:<digest>` | Required by the hardened compose profiles — no floating tag is assumed. Point these at an immutable digest of a reviewed image before running `docker compose up`. |
 | `MEDIA_DOWNLOADER_AGENT_IMAGE` | `knucklessg1/media-downloader@sha256:<digest>` |  |
+| `MEDIA_DOWNLOADER_OUTPUT_ROOT` | `/data/media` | Every download is written beneath this root; a path that escapes it is rejected. Falls back to WORKSPACE_PATH, then ~/Downloads. |
+| `WORKSPACE_PATH` | `/workspace` |  |
+| `MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS` | `media.internal.example` | Exact hostnames allowed to resolve to a private address. Downloads are restricted to publicly routable hosts otherwise; no wildcards are accepted. |
+| `MEDIA_DOWNLOADER_MAX_WORKERS` | `4` | Parallel download workers, clamped to 1-4. |
 
 #### Inherited agent-utilities variables (apply to every connector)
 
@@ -362,11 +380,11 @@ Built directly upon the enterprise-ready [`agent-utilities`](https://github.com/
 | `DEBUG` | `False` | Verbose logging |
 | `PYTHONUNBUFFERED` | `1` | Unbuffered stdout (recommended in containers) |
 | `MCP_URL` | `http://localhost:8000/mcp` | URL of the MCP server the agent connects to |
-| `PROVIDER` | `openai` | LLM provider for the agent |
-| `MODEL_ID` | `gpt-4o` | Model id for the agent |
+| `PROVIDER` | — | Operator-configured LLM provider for the agent |
+| `MODEL_ID` | — | Operator-configured model id for the agent |
 | `ENABLE_WEB_UI` | `True` | Serve the AG-UI web interface |
 
-_13 package + 16 inherited variable(s). Auto-generated from `.env.example` + the shared agent-utilities set — do not edit._
+_17 package + 16 inherited variable(s). Auto-generated from `.env.example` + the shared agent-utilities set — do not edit._
 <!-- ENV-VARS-TABLE:END -->
 
 
