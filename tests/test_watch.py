@@ -149,6 +149,30 @@ def test_select_timestamps_keeps_the_highest_scoring_in_time_order():
     assert stamps != [c["timestamp_s"] for c in candidates[:5]]
 
 
+def test_select_timestamps_fills_a_long_blind_spot():
+    """A static stretch produces no cuts; it must not go unsampled."""
+    # Every cut is bunched in the first minute of a 20-minute video.
+    clustered = [{"timestamp_s": float(i), "scene_score": 0.9} for i in range(20)]
+    chosen, mode = select_timestamps(
+        clustered, 1200.0, max_frames=10, min_frames=6, max_gap=120.0
+    )
+    assert mode == "scene+coverage"
+    stamps = [c["timestamp_s"] for c in chosen]
+    assert stamps == sorted(stamps)
+    gaps = [b - a for a, b in zip([0.0] + stamps, stamps + [1200.0])]
+    assert max(gaps) <= 120.0, "no stretch of the video may go unsampled"
+    assert any(c["scene_score"] is None for c in chosen), "coverage frames are marked"
+
+
+def test_select_timestamps_leaves_a_well_covered_video_alone():
+    spread = [{"timestamp_s": i * 30.0, "scene_score": 0.9} for i in range(20)]
+    chosen, mode = select_timestamps(
+        spread, 600.0, max_frames=20, min_frames=6, max_gap=120.0
+    )
+    assert mode == "scene"
+    assert all(c["scene_score"] is not None for c in chosen)
+
+
 def test_select_timestamps_falls_back_to_even_spacing():
     chosen, mode = select_timestamps(
         _candidates(2), 60.0, max_frames=24, min_frames=6
@@ -205,37 +229,82 @@ def test_probe_duration_returns_none_on_unparseable_output(mock_run):
     assert probe_duration(Path("/tmp/x.mp4")) is None
 
 
-@patch("media_downloader.media_downloader._run")
-def test_extract_frames_names_files_after_their_timestamp(mock_run, tmp_path):
+def _capture_stub(written):
+    """Stand in for the ffmpeg capture: record the seek and create the file."""
+
+    def _capture(media, seconds, target):
+        written.append(round(seconds, 3))
+        target.write_bytes(b"jpeg")
+        return True
+
+    return _capture
+
+
+def test_extract_frames_keeps_the_sharpest_candidate(tmp_path):
+    """A cut caught mid-pan must not become the frame that gets kept."""
     frames_dir = tmp_path / "frames"
+    written: list[float] = []
+    # The middle candidate is the sharp one.
+    sharpness = {10.1: 1.5, 10.45: 9.0, 10.8: 2.0}
 
-    def fake(command, timeout):
-        Path(command[-1]).write_bytes(b"jpeg")
-        return subprocess.CompletedProcess(command, 0, "", "")
+    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
+        with patch(
+            "media_downloader.media_downloader.frame_sharpness",
+            side_effect=lambda p: sharpness[written[-1]],
+        ):
+            items = extract_frames(
+                Path("/tmp/x.mp4"), [{"timestamp_s": 10.0, "scene_score": 0.9}], frames_dir
+            )
 
-    mock_run.side_effect = fake
-    items = extract_frames(
-        Path("/tmp/x.mp4"),
-        [{"timestamp_s": 12.48, "scene_score": 0.9}],
-        frames_dir,
-    )
+    assert written == [10.1, 10.45, 10.8], "all candidates after the cut are tried"
     assert items == [
         {
-            "file": "frames/frame_0001_t00012.480.jpg",
-            "timestamp_s": 12.48,
+            "file": "frames/frame_0001_t00010.450.jpg",
+            "timestamp_s": 10.45,
             "scene_score": 0.9,
+            "sharpness": 9.0,
         }
     ]
-    assert (frames_dir / "frame_0001_t00012.480.jpg").exists()
+    assert (frames_dir / "frame_0001_t00010.450.jpg").exists()
+    # The losing candidates and the scratch file must not survive.
+    assert sorted(p.name for p in frames_dir.iterdir()) == [
+        "frame_0001_t00010.450.jpg"
+    ]
 
 
-@patch("media_downloader.media_downloader._run")
-def test_extract_frames_skips_a_failed_seek(mock_run, tmp_path):
-    mock_run.return_value = subprocess.CompletedProcess([], 1, "", "boom")
+def test_extract_frames_straddles_the_mark_for_a_coverage_frame(tmp_path):
+    """A coverage frame has no cut to avoid, so it searches both directions."""
+    written: list[float] = []
+    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
+        with patch("media_downloader.media_downloader.frame_sharpness", return_value=5.0):
+            extract_frames(
+                Path("/tmp/x.mp4"),
+                [{"timestamp_s": 100.0, "scene_score": None}],
+                tmp_path / "frames",
+            )
+    assert written == [99.65, 100.0, 100.35]
+
+
+def test_extract_frames_never_seeks_before_zero(tmp_path):
+    written: list[float] = []
+    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
+        with patch("media_downloader.media_downloader.frame_sharpness", return_value=5.0):
+            items = extract_frames(
+                Path("/tmp/x.mp4"),
+                [{"timestamp_s": 0.1, "scene_score": None}],
+                tmp_path / "frames",
+            )
+    assert items[0]["timestamp_s"] >= 0.0
+
+
+@patch("media_downloader.media_downloader._capture_frame", return_value=False)
+def test_extract_frames_skips_a_target_it_cannot_capture(_mock_capture, tmp_path):
+    frames_dir = tmp_path / "f"
     items = extract_frames(
-        Path("/tmp/x.mp4"), [{"timestamp_s": 1.0, "scene_score": 0.9}], tmp_path / "f"
+        Path("/tmp/x.mp4"), [{"timestamp_s": 1.0, "scene_score": 0.9}], frames_dir
     )
     assert items == []
+    assert list(frames_dir.iterdir()) == [], "no scratch file is left behind"
 
 
 def test_extract_frames_makes_no_directory_without_timestamps(tmp_path):

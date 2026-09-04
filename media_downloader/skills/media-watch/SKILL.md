@@ -59,6 +59,7 @@ still returns captions and reports `frames.status: "unavailable"`.
 - `download_directory` — where the bundle is written (default `.`).
 - `max_frames` — cap on extracted key frames (default 24).
 - `scene_threshold` — ffmpeg scene sensitivity, 0-1 (default 0.3); lower finds more.
+- Frames also carry a `sharpness` score; below ~3 usually means motion blur.
 - `subtitle_languages` — comma-separated caption codes (default `en,en-orig`).
 
 ## Recipes
@@ -129,12 +130,21 @@ not have to check the sources table to learn that nothing on screen was seen.
 ## Gotchas
 - `status: "partial"` means captions or frames are missing — the analysis is
   incomplete by definition, so report it rather than papering over the gap.
-- Frames are capped by scene score, not by time: the highest-scoring changes are
-  kept and re-sorted chronologically, so gaps between frames are expected and do
-  not mean anything was dropped silently.
-- `mode: "interval"` means too few scene changes were found and frames are evenly
-  spaced instead — common for a static talking head, and weaker evidence of what
-  was on screen.
+- Frames are chosen in two passes. Scene changes come first, capped by score so
+  the most informative screens survive rather than just the earliest. Then a
+  coverage floor fills any gap longer than two minutes, because a static shot
+  produces no cuts at all — on real footage an entire bench experiment, meter
+  readings and all, fell into such a gap and was captured only by the coverage
+  frames. `mode` reports which applied: `scene`, `scene+coverage`, or `interval`
+  when there were too few cuts to work from.
+- Each frame is chosen for sharpness, not just timing: several candidates are
+  captured around every target and the one with the most edge energy is kept, so
+  a cut caught mid-pan does not become an unreadable frame. The kept score is in
+  `frames.items[].sharpness`. If a specific reading matters and its frame scores
+  low, the moment was blurred throughout — go back to the transcript rather than
+  guessing at pixels.
+- Frame extraction is the slow part: roughly two minutes for a 25-minute video,
+  because every frame is captured several times over.
 - Caption language codes are not wildcards. `en.*` asks a site for every
   translated track and earns a rate-limit error; name the codes you want.
   The default is English (`en,en-orig`), and the requested order wins over
