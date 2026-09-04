@@ -111,16 +111,52 @@ and the derived `WORKFLOW.md`.
 
 Before writing, call `list_watch_skills` on the skills root. It says whether this
 video extends a skill that already exists and whether that skill already covers
-it. Then pick a mode:
+it.
 
-| Mode | Use when |
-|------|----------|
-| `create` | No existing skill covers this subject. Needs a `description`. |
-| `append` | A later video adds a section without changing what the earlier ones meant. |
-| `replace` | A later video changes the picture, and the whole body needs rewriting. Provenance is kept. |
+### Every skill must say what would change it
 
-`append` refuses a video the skill already lists, so re-running is safe.
-`replace` keeps every recorded source and bumps the version like `append` does.
+The body must contain a closing **`## What would change this skill`** section
+naming the evidence that would revise or overturn it. `build_watch_skill`
+refuses a `create` or `replace` without one, and always keeps it last so later
+sections cannot bury it. On `append`, an incoming assessment supersedes the old
+one, because a new source usually changes what is still missing.
+
+Write it as the specific observation that would move a claim from asserted to
+established, or break it. Whatever the subject, the question is the same: *what
+would I have to see to change my mind?*
+
+| Domain | A useful revision criterion |
+|--------|------------------------------|
+| Cooking | A version that weighs the hydration instead of judging by feel; a result at a different altitude or oven type |
+| Medicine | A controlled trial rather than a case series or testimonial; dosing verified against a current formulary |
+| Finance | An out-of-sample period; returns net of fees, slippage and tax; a drawdown through a regime the sample never saw |
+| Science / engineering | A controlled measurement with the confounder held fixed, and the quantity measured directly rather than inferred |
+| Software | A benchmark on the real workload rather than a microbenchmark; behaviour at production scale |
+| Craft / repair | The same procedure on a different model or revision; a torque figure from the manufacturer rather than from feel |
+
+A skill that cannot say what would change it reads as settled when it is only as
+good as the sources it happens to have.
+
+### Choosing append or replace
+
+Default to `append`. Switch to `replace` when **any** of these is true — this is
+the test, not a matter of taste:
+
+1. **The new source contradicts something the skill already states.** Two
+   conflicting instructions sitting in one document is worse than either alone.
+2. **It changes a conclusion or recommendation**, rather than adding detail
+   under one.
+3. **It supersedes rather than extends** — the creator changed technique, revised
+   a figure, or abandoned an approach the skill still presents as current.
+4. **The body no longer reads as one document** — duplicated sections, stale
+   "this video" phrasing once there are several, or an order that no longer makes
+   sense to someone reading top to bottom.
+5. **The description no longer matches the scope**, because the skill has grown
+   past what it claims to cover. Pass a corrected `description` with the rewrite.
+
+When you `replace`, do not silently drop superseded material. Say what changed
+and which source changed it — a reader needs to know the skill once said
+otherwise, and provenance keeps every source listed either way.
 
 Because provenance records what each video actually yielded — transcript lines,
 frame count, or their absence — a skill built from a caption-only bundle stays

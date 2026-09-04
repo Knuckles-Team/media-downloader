@@ -186,7 +186,9 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
         body: str = Field(
             description=(
                 "The markdown body you wrote from the bundle, starting with a "
-                "'# Title' heading. Do not include a Sources section - it is "
+                "'# Title' heading and ending with a "
+                "'## What would change this skill' section naming the evidence "
+                "that would revise it. Do not include a Sources section - it is "
                 "generated from the manifest."
             )
         ),
@@ -214,6 +216,12 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
         Appending a video the skill already lists is refused rather than
         duplicated, so re-running a pipeline is safe. Call `list_watch_skills`
         first to see which skill a new video belongs to.
+
+        Default to `append`. Use `replace` when the new source contradicts the
+        skill, changes a conclusion, supersedes rather than extends it, leaves
+        the body no longer reading as one document, or outgrows the description.
+        A `create` or `replace` without a "What would change this skill" section
+        is refused.
         """
         if ctx:
             await ctx.info(f"Writing skill '{name}' ({mode})")
