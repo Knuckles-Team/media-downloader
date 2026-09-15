@@ -453,15 +453,15 @@ One multi-stage `docker/Dockerfile` builds two right-sized images, selected by `
 | Image tag | Build target | Contents | Entrypoint |
 |-----------|--------------|----------|------------|
 | `knucklessg1/media-downloader:mcp` | `--target mcp` | `media-downloader[mcp]` — **connector-focused**, includes `epistemic-graph[full]`; no model-orchestration stack | `media-downloader-mcp` |
-| `knucklessg1/media-downloader:latest` | `--target agent` (default) | `media-downloader[agent]` — **agent runtime**, model orchestration + `epistemic-graph[full]` | `media-downloader-agent` |
+| `knucklessg1/media-downloader@sha256:<digest>` (agent build) | `--target agent` (default) | `media-downloader[agent]` — **agent runtime**, model orchestration + `epistemic-graph[full]` | `media-downloader-agent` |
 
 ```bash
-docker build --target mcp   -t knucklessg1/media-downloader:mcp    docker/   # connector-focused MCP server
-docker build --target agent -t knucklessg1/media-downloader:latest docker/   # agent runtime
+docker build --target mcp   -t knucklessg1/media-downloader:mcp   docker/   # connector-focused MCP server
+docker build --target agent -t knucklessg1/media-downloader:local docker/   # agent runtime (local build; publish/pin a digest via your release process)
 ```
 
 `docker/mcp.compose.yml` runs the connector-focused `:mcp` server; `docker/agent.compose.yml` runs the
-agent (`:latest`) with a co-located `:mcp` sidecar. For an immutable production digest, tag and
+agent (default build) with a co-located `:mcp` sidecar. For an immutable production digest, tag and
 pin your own build as shown in the hardened `docker run` pattern above.
 
 ### Knowledge-graph database (`epistemic-graph`)
