@@ -1,6 +1,5 @@
 import argparse
 import importlib
-import os
 import runpy
 import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
@@ -10,7 +9,6 @@ from fastmcp import Context, FastMCP
 
 # Import under an alias to avoid name conflict with the CLI function media_downloader
 import media_downloader as md_package
-from media_downloader.agent_server import agent_server
 from media_downloader.mcp_server import get_mcp_instance, mcp_server
 from media_downloader.media_downloader import (
     MediaDownloader,
@@ -63,15 +61,11 @@ def mock_agent_utilities_and_mcp():
             "agent_utilities.build_system_prompt_from_workspace",
             return_value="System Prompt",
         ),
-        patch(
-            "media_downloader.agent_server.create_agent_server"
-        ) as mock_create_agent_server,
     ):
         yield {
             "mock_create_mcp": mock_create_mcp,
             "local_mcp": local_mcp,
             "mock_args": mock_args,
-            "mock_create_agent_server": mock_create_agent_server,
         }
 
 
@@ -207,7 +201,9 @@ def test_open_file():
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_standard(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -216,7 +212,9 @@ def test_download_video_standard(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_audio(_mock_exists, _mock_validate):
     # Tests the audio path which triggers FFmpegExtractAudio postprocessor branch
@@ -226,8 +224,12 @@ def test_download_video_audio(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get
+)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_rumble(_mock_exists, _mock_validate, mock_get):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -238,7 +240,9 @@ def test_download_video_rumble(_mock_exists, _mock_validate, mock_get):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_retry_fallback(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -248,14 +252,18 @@ def test_download_video_retry_fallback(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 def test_download_video_permanent_failure(_mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     result = downloader.download_video("https://youtube.com/fail_always")
     assert result is None
 
 
-@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
+@patch(
+    "media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get
+)
 def test_get_channel_videos_username(mock_get):
     downloader = MediaDownloader()
     downloader.get_channel_videos("test_user", limit=1)
@@ -546,69 +554,8 @@ def test_mcp_server_entrypoint(mock_get_instance):
 
 
 # =====================================================================
-# Agent Server Tests
-# =====================================================================
-
-
-@patch("media_downloader.agent_server.create_agent_server")
-@patch("media_downloader.agent_server.create_agent_parser")
-def test_agent_server_entrypoint(mock_parser, mock_create_server):
-    mock_args = MagicMock()
-    mock_args.debug = True
-    mock_args.mcp_url = "http://localhost:8000"
-    mock_args.mcp_config = "custom_config.json"
-    mock_args.host = "127.0.0.1"
-    mock_args.port = 8500
-    mock_args.provider = "openai"
-    mock_args.model_id = "gpt-4o"
-    mock_args.base_url = "http://custom_base"
-    mock_args.api_key = "secret_key"
-    mock_args.custom_skills_directory = "/tmp/skills"
-    mock_args.web = True
-    mock_args.otel = False
-    mock_args.otel_endpoint = None
-    mock_args.otel_headers = None
-    mock_args.otel_public_key = None
-    mock_args.otel_secret_key = None
-    mock_args.otel_protocol = None
-
-    mock_parser.return_value.parse_args.return_value = mock_args
-
-    agent_server()
-
-    mock_create_server.assert_called_once_with(
-        mcp_url="http://localhost:8000",
-        mcp_config="custom_config.json",
-        host="127.0.0.1",
-        port=8500,
-        provider="openai",
-        model_id="gpt-4o",
-        router_model="gpt-4o",
-        agent_model="gpt-4o",
-        base_url="http://custom_base",
-        api_key="secret_key",
-        custom_skills_directory="/tmp/skills",
-        enable_web_ui=True,
-        enable_otel=False,
-        otel_endpoint=None,
-        otel_headers=None,
-        otel_public_key=None,
-        otel_secret_key=None,
-        otel_protocol=None,
-        debug=True,
-    )
-
-
-# =====================================================================
 # Main execution (__main__.py) tests
 # =====================================================================
-
-
-@patch("sys.argv", ["media_downloader"])
-@patch("media_downloader.agent_server.agent_server")
-def test_main_exec(mock_agent_server):
-    runpy.run_module("media_downloader.__main__", run_name="__main__")
-    mock_agent_server.assert_called_once()
 
 
 # =====================================================================
@@ -621,15 +568,13 @@ def test_package_init_attributes():
     dir_list = dir(md_package)
     assert "MediaDownloader" in dir_list
 
-    # Test availability flags
+    # Test availability flags: agent_server.py was retired (no
+    # agent-connector-sdk equivalent -- SDK-GAPS.md #11), so this is
+    # unconditionally unavailable now.
     assert md_package._MCP_AVAILABLE is True
-    assert (
-        md_package._AGENT_AVAILABLE is True
-        or md_package._agent_server_AVAILABLE is not None
-    )
+    assert md_package._AGENT_AVAILABLE is False
 
-    # Test loading agent and mcp attributes dynamically
-    assert md_package.agent_server is agent_server
+    # Test loading mcp attributes dynamically
     assert md_package.get_mcp_instance is get_mcp_instance
 
     # Test attribute error
@@ -668,24 +613,6 @@ def test_requests_dependency_warning_import_error():
 
     with patch.dict(sys.modules, {"requests.exceptions": None}):
         importlib.reload(sys.modules["media_downloader.mcp_server"])
-
-
-def test_agent_server_main_block():
-    # Runs the main block of agent_server.py (line 80) without locking the database or hitting workspace loading
-    with (
-        patch("sys.argv", ["media_downloader"]),
-        patch("agent_utilities.initialize_workspace"),
-        patch("agent_utilities.load_identity") as mock_load,
-        patch("agent_utilities.build_system_prompt_from_workspace"),
-        patch("agent_utilities.create_agent_server") as mock_create,
-    ):
-        mock_load.return_value = {
-            "name": "Agent",
-            "description": "Desc",
-            "content": "Prompt",
-        }
-        runpy.run_module("media_downloader.agent_server", run_name="__main__")
-        mock_create.assert_called_once()
 
 
 def test_mcp_server_main_block():
