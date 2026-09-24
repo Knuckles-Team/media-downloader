@@ -39,25 +39,12 @@ _INFO_FIELDS = (
 )
 
 
-def _media_store() -> Any | None:
-    """Build a ``MediaStore`` over a live engine, or ``None`` when unavailable."""
-    try:
-        from agent_utilities.knowledge_graph.core.graph_compute import (
-            GraphComputeEngine,
-        )
-        from agent_utilities.knowledge_graph.memory.media_store import MediaStore
-    except Exception as e:  # noqa: BLE001 — agent-utilities KG stack absent
-        logger.debug("Operation failed: error_type=%s", type(e).__name__)
-        return None
-    try:
-        engine = GraphComputeEngine()
-        if getattr(engine, "_client", None) is None:
-            logger.debug("KG media ingest: no live engine client")
-            return None
-        return MediaStore(engine)
-    except Exception as e:  # noqa: BLE001 — no reachable engine
-        logger.debug("Operation failed: error_type=%s", type(e).__name__)
-        return None
+def _media_store(*args: object, **kwargs: object) -> object:
+    """Build a ``MediaStore`` over a live engine, or ``None`` when unavailable.
+
+    SDK-GAP: No-op: nothing left to register/write; preserves the graceful-degradation contract.
+    """
+    return None
 
 
 _MIME_PREFIX_TO_MEDIA_TYPE = (
@@ -168,3 +155,23 @@ def ingest_media_file(
         "size_bytes": len(data),
         "media_type": media_type,
     }
+
+
+class KnowledgeGraphIngestUnavailable(RuntimeError):
+    """Direct-to-graph ingestion is unavailable from this connector.
+
+    SDK-GAP (EH-48x, /var/tmp/l9/finish/au-decon-G4c/SDK-GAPS.md): raised in
+    place of the old ``agent_utilities.knowledge_graph`` native-ingest call --
+    agent-connector-sdk has no facade over EG's typed ingestion protocol yet,
+    and the fleet precedent (agents/world-reference-mcp) moves direct-to-graph
+    delivery to agent_connector_sdk.runner/sinks at the deployment layer, out
+    of connector scope.
+    """
+
+
+def _kg_unavailable(name: str) -> None:
+    raise KnowledgeGraphIngestUnavailable(
+        f"{name}: direct-to-graph ingestion moved out of connector code "
+        "(agent-utilities removed); no agent-connector-sdk facade exists yet "
+        "-- see SDK-GAPS.md"
+    )
