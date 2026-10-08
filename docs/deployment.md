@@ -106,7 +106,7 @@ curl -s http://localhost:8000/health        # {"status":"OK"}
 `media-downloader` is configured entirely from the environment. The **required** set
 is small — the downloader needs no external service. Copy
 [`.env.example`](https://github.com/Knuckles-Team/media-downloader/blob/main/.env.example)
-to `.env` and fill in only what you use:
+to `.env` and fill in only what the operator use:
 
 | Var | Default | Meaning |
 |---|---|---|
@@ -208,7 +208,7 @@ docker compose -f docker/agent.compose.yml up -d
 
 ## Behind a Caddy reverse proxy
 
-Expose the HTTP server on a hostname with automatic TLS. Add to your `Caddyfile`:
+Expose the HTTP server on a hostname with automatic TLS. Add to the operator's `Caddyfile`:
 
 ```caddy
 # Internal (self-signed) — homelab .example.invalid zone
@@ -252,7 +252,7 @@ this as a tool.
 
 ## Register with an MCP client
 
-Add to your client's `mcp_config.json`:
+Add to the operator's client's `mcp_config.json`:
 
 ```json
 {

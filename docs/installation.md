@@ -1,7 +1,7 @@
 # Installation
 
 `media-downloader` is a standard Python package and a prebuilt container image. Pick
-the path that matches how you want to run it.
+the path that matches how the operator want to run it.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ pip install media-downloader
 ### Optional extras
 
 The base install ships the CLI and the `MediaDownloader` Python API. Install the
-extra for the runtime you need:
+extra for the runtime the operator need:
 
 | Extra | Install | Pulls in |
 |---|---|---|

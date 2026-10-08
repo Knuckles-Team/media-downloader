@@ -1,7 +1,7 @@
 # Usage — MCP / API / CLI
 
 `media-downloader` exposes the same capability three ways: as an **MCP tool** an agent
-calls, as a **Python API** (`MediaDownloader`) you import, and as a **CLI**.
+calls, as a **Python API** (`MediaDownloader`) the operator import, and as a **CLI**.
 
 ## As an MCP server
 
@@ -59,7 +59,7 @@ downloader = MediaDownloader(
 downloader.download_all()
 ```
 
-Queue URLs from a file, or enumerate a channel:
+Queue URLs from a file, or list a channel:
 
 ```python
 downloader = MediaDownloader(download_directory="./Downloads")

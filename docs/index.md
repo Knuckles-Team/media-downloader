@@ -32,7 +32,7 @@ tracing, Eunomia policy authorization, and prompt-injection defenses.
 
 <div class="grid cards" markdown>
 
-- :material-rocket-launch: **[Installation](installation.md)** — pip, source, extras, and the prebuilt Docker image.
+- :material-rocket-start: **[Installation](installation.md)** — pip, source, extras, and the prebuilt Docker image.
 - :material-server-network: **[Deployment](deployment.md)** — run the MCP server, the agent server, Docker Compose, Caddy + Technitium.
 - :material-console: **[Usage](usage.md)** — the MCP tools, the `MediaDownloader` Python API, and the CLI.
 - :material-sitemap: **[Overview](overview.md)** — the ecosystem role, enterprise readiness, and architecture.
