@@ -766,7 +766,7 @@
 
 <h1 id="usage-mcp-api-cli">Usage — MCP / API / CLI<a class="headerlink" href="#usage-mcp-api-cli" title="Permanent link">&para;</a></h1>
 <p><code>media-downloader</code> exposes the same capability three ways: as an <strong>MCP tool</strong> an agent
-calls, as a <strong>Python API</strong> (<code>MediaDownloader</code>) you import, and as a <strong>CLI</strong>.</p>
+calls, as a <strong>Python API</strong> (<code>MediaDownloader</code>) the operator import, and as a <strong>CLI</strong>.</p>
 <h2 id="as-an-mcp-server">As an MCP server<a class="headerlink" href="#as-an-mcp-server" title="Permanent link">&para;</a></h2>
 <p>Once <a href="../deployment/">deployed</a>, the server registers the <code>download_media</code> tool and two
 prompts. No external service is required — downloads run against any site <code>yt-dlp</code>
@@ -853,7 +853,7 @@ callbacks.</p>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">downloader</span><span class="o">.</span><span class="n">download_all</span><span class="p">()</span>
 </span></code></pre></div>
-<p>Queue URLs from a file, or enumerate a channel:</p>
+<p>Queue URLs from a file, or list a channel:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">downloader</span> <span class="o">=</span> <span class="n">MediaDownloader</span><span class="p">(</span><span class="n">download_directory</span><span class="o">=</span><span class="s2">"./Downloads"</span><span class="p">)</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">downloader</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="s2">"urls.txt"</span><span class="p">)</span>            <span class="c1"># one URL per line, de-duplicated</span>
