@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+import platformdirs
 import yaml
 import yt_dlp
 
@@ -765,16 +766,17 @@ def _bumped(version: str) -> str:
 def default_skills_root() -> Path:
     """Where video-built skills live by default.
 
-    The fleet centralises operator-owned skills in one XDG location, and
-    agent-utilities owns that path - `~/.local/share/agent-utilities/skills/`,
-    overridable with `AGENT_UTILITIES_SKILLS_DIR`. Resolve it through
-    agent-utilities rather than rebuilding the path here, so this package cannot
-    drift from the rest of the fleet. Its documented flat
+    The fleet centralises operator-owned skills in one XDG location:
+    `~/.local/share/agent-utilities/skills/`, overridable with
+    `AGENT_UTILITIES_SKILLS_DIR`. Mirrors `agent_utilities.core.paths.skills_dir`
+    exactly (same env var, same default) without importing agent_utilities, so
+    this package cannot drift from the rest of the fleet. Its documented flat
     `skills/<skill>/SKILL.md` layout is what `build_skill` writes.
     """
-    from agent_utilities.core.paths import skills_dir
-
-    return Path(skills_dir())
+    override = os.environ.get("AGENT_UTILITIES_SKILLS_DIR")
+    if override:
+        return Path(override).expanduser()
+    return Path(platformdirs.user_data_path("agent-utilities", "knuckles-team")) / "skills"
 
 
 def skill_sources(skill_dir: Path) -> list[dict]:

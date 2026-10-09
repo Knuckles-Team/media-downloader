@@ -2,29 +2,47 @@
 
 CONCEPT:AU-KG.ingest.list-durable-media. When a live epistemic-graph engine is
 reachable, a downloaded file is stored as a content-addressed **blob** with a
-``:MediaAsset`` graph node (carrying its yt-dlp metadata) in ONE cross-modal ACID
-commit, via the agent-utilities ``MediaStore``. This makes the raw bytes — not just
-a filesystem path — durable, deduped, and queryable inside the knowledge graph.
+``MediaArtifact`` graph node (carrying its yt-dlp metadata) via the
+agent-connector-sdk knowledge-ingest facade. This makes the raw bytes - not
+just a filesystem path - durable, deduped, and queryable inside the
+knowledge graph.
 
-Entirely best-effort and dependency-guarded: if agent-utilities' KG stack or a live
-engine is not present, every entry point here **no-ops** (returns ``None``), so the
-downloader keeps working with zero KG infrastructure. This is the native ingestion
-seam the ``media-downloader`` package contributes to the KG — the downloader calls it
-automatically after each successful download.
+Entirely best-effort: if no epistemic-graph endpoint is configured, or the
+configured engine is unreachable, every entry point here **no-ops** (returns
+``None``), so the downloader keeps working with zero KG infrastructure. This
+is the native ingestion seam the ``media-downloader`` package contributes to
+the KG - the downloader calls it automatically after each successful
+download.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import mimetypes
 import os
 from typing import Any
 
+from agent_connector_sdk.ingest import (
+    ChangeSet,
+    IngestBinding,
+    IngestError,
+    KnowledgeIngest,
+    MediaAsset,
+    ingest_changes,
+)
+
 from media_downloader.security import public_source_url
 
 logger = logging.getLogger("MediaDownloader.kg")
 
-# yt-dlp info keys worth carrying onto the :MediaAsset node.
+# This connector's own manifest declares `MediaArtifact` (not the SDK's generic
+# `MediaAsset` default) as the resource a stored media blob becomes.
+_BINDING = IngestBinding(
+    connector="media-downloader", stream="media", media_type="MediaArtifact"
+)
+
+# yt-dlp info keys worth carrying onto the MediaArtifact node.
 _INFO_FIELDS = (
     "id",
     "title",
@@ -37,27 +55,6 @@ _INFO_FIELDS = (
     "fps",
     "upload_date",
 )
-
-
-def _media_store() -> Any | None:
-    """Build a ``MediaStore`` over a live engine, or ``None`` when unavailable."""
-    try:
-        from agent_utilities.knowledge_graph.core.graph_compute import (
-            GraphComputeEngine,
-        )
-        from agent_utilities.knowledge_graph.memory.media_store import MediaStore
-    except Exception as e:  # noqa: BLE001 — agent-utilities KG stack absent
-        logger.debug("Operation failed: error_type=%s", type(e).__name__)
-        return None
-    try:
-        engine = GraphComputeEngine()
-        if getattr(engine, "_client", None) is None:
-            logger.debug("KG media ingest: no live engine client")
-            return None
-        return MediaStore(engine)
-    except Exception as e:  # noqa: BLE001 — no reachable engine
-        logger.debug("Operation failed: error_type=%s", type(e).__name__)
-        return None
 
 
 _MIME_PREFIX_TO_MEDIA_TYPE = (
@@ -99,47 +96,24 @@ def _media_extra_and_name(
     return extra, name
 
 
-def _store_media_bytes(
-    store: Any,
-    data: bytes,
-    media_type: str,
-    mime: str,
-    source: str,
-    name: str,
-    extra: dict[str, Any],
-) -> Any | None:
-    try:
-        return store.store_media(
-            data,
-            media_type=media_type,
-            mime_type=mime,
-            source=source,
-            name=name,
-            extra=extra,
-        )
-    except Exception as e:  # noqa: BLE001 — engine/store failure is non-fatal
-        logger.warning("Operation failed: error_type=%s", type(e).__name__)
-        return None
-
-
 def ingest_media_file(
     file_path: str | None,
     *,
     info: dict[str, Any] | None = None,
     source_url: str = "",
     source: str = "media-downloader",
-    media_store: Any | None = None,
+    ingest: KnowledgeIngest | None = None,
 ) -> dict[str, Any] | None:
-    """Store a downloaded file as a blob + ``:MediaAsset`` in the knowledge graph.
+    """Store a downloaded file as a blob + ``MediaArtifact`` in the knowledge graph.
 
     Returns ``{asset_id, digest, size_bytes, media_type}`` on success, or ``None``
     when there is no engine, no file, or the store failed (never raises).
-    ``media_store`` may be injected (tests); otherwise one is built on demand.
+    ``ingest`` may be injected (tests); otherwise the process's installed/
+    configured :class:`KnowledgeIngest` is used via ``submit_blocking`` - safe
+    here because the ingest client runs on its own dedicated connection
+    thread, never the caller's.
     """
     if not file_path or not os.path.exists(file_path):
-        return None
-    store = media_store if media_store is not None else _media_store()
-    if store is None:
         return None
 
     info = info or {}
@@ -151,20 +125,32 @@ def ingest_media_file(
         return None
 
     extra, name = _media_extra_and_name(info, source_url)
+    asset = MediaAsset(data=data, mime_type=mime, name=name, properties=extra)
+    change_set = ChangeSet(media=(asset,))
 
-    stored = _store_media_bytes(store, data, media_type, mime, source, name, extra)
-    if stored is None:
+    try:
+        if ingest is not None:
+            ingest.submit_blocking(_BINDING, change_set)
+        else:
+            ingest_changes(_BINDING, change_set)
+    except IngestError as e:  # no engine configured/reachable, or commit refused
+        logger.debug("Operation failed: error_type=%s", type(e).__name__)
+        return None
+    except Exception as e:  # noqa: BLE001 — never let best-effort ingest fail the download
+        logger.warning("Operation failed: error_type=%s", type(e).__name__)
         return None
 
+    digest = hashlib.sha256(data).hexdigest()
+    asset_id = asset.id or f"blob:{digest}"
     logger.info(
         "KG media ingest: stored media bytes (%s bytes) as asset %s digest %s",
         len(data),
-        stored.asset_id,
-        stored.digest[:16],
+        asset_id,
+        digest[:16],
     )
     return {
-        "asset_id": stored.asset_id,
-        "digest": stored.digest,
+        "asset_id": asset_id,
+        "digest": digest,
         "size_bytes": len(data),
         "media_type": media_type,
     }
