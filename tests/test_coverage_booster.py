@@ -1,6 +1,5 @@
 import argparse
 import importlib
-import os
 import runpy
 import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
@@ -51,7 +50,7 @@ def mock_agent_utilities_and_mcp():
 
     with (
         patch(
-            "agent_utilities.mcp.server_factory.create_mcp_server",
+            "agent_connector_sdk.mcp.server.create_mcp_server",
             return_value=(mock_args, local_mcp, []),
         ) as mock_create_mcp,
         patch("agent_utilities.initialize_workspace"),
@@ -689,7 +688,7 @@ def test_agent_server_main_block():
 
 
 def test_mcp_server_main_block():
-    # Runs the main block of mcp_server.py (line 132) by stubbing out create_mcp_server in agent_utilities
+    # Runs the main block of mcp_server.py (line 132) by stubbing out create_mcp_server in agent_connector_sdk
     mock_mcp = MagicMock()
     mock_args = MagicMock()
     mock_args.transport = "stdio"
@@ -697,7 +696,7 @@ def test_mcp_server_main_block():
     with (
         patch("sys.argv", ["media_downloader"]),
         patch(
-            "agent_utilities.mcp.server_factory.create_mcp_server",
+            "agent_connector_sdk.mcp.server.create_mcp_server",
             return_value=(mock_args, mock_mcp, []),
         ),
     ):
