@@ -2,12 +2,12 @@
 name: media-downloader-operations
 skill_type: skill
 description: >-
-  Operate media-downloader through its governed MCP and GraphOS capabilities, including media audio, media download, media watch. Use when a request requires this provider's read, change, automation, ingestion, troubleshooting, or evidence workflows.
+  Operate media-downloader through its governed MCP and Arbora capabilities, including media audio, media download, media watch. Use when a request requires this provider's read, change, automation, ingestion, troubleshooting, or evidence workflows.
 ---
 
 # Media Downloader Operations
 
-Use the provider's governed MCP tools through GraphOS delegation.
+Use the provider's governed MCP tools through Arbora delegation.
 
 ## Workflow
 
