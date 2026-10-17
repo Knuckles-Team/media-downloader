@@ -22,8 +22,7 @@ extra for the runtime the operator need:
 
 | Extra | Install | Pulls in |
 |---|---|---|
-| `mcp` | `pip install "media-downloader[mcp]"` | FastMCP MCP-server runtime (`agent-utilities[mcp]`) |
-| `agent` | `pip install "media-downloader[agent]"` | Pydantic-AI agent + Logfire tracing (`agent-utilities[agent-runtime,logfire]`) |
+| `mcp` | `pip install "media-downloader[mcp]"` | FastMCP MCP-server runtime (`agent-connector-sdk`) |
 | `all` | `pip install "media-downloader[all]"` | The MCP server and the agent together |
 | `test` | `pip install "media-downloader[test]"` | `pytest`, `pytest-asyncio`, `pytest-cov`, `pytest-xdist` |
 

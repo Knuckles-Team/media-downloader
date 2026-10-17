@@ -64,7 +64,6 @@ Store the real remote URL, outbound identity reference, and TLS-profile referenc
 
 This page covers running `media-downloader` as a long-lived server: the transports, a
 Docker Compose stack, putting it behind a Caddy reverse proxy, and giving it a DNS
-name with Technitium. It also documents the optional **A2A agent server**.
 
 > `media-downloader` ships an **MCP server** (console script `media-downloader-mcp`)
 > and a **Pydantic-AI agent server** (console script `media-downloader-agent`). The
@@ -168,7 +167,6 @@ export MCP_URL=http://localhost:8000/mcp
 media-downloader-agent --provider openai --model-id gpt-4o --host 0.0.0.0 --port 9000
 ```
 
-The repo ships [`docker/agent.compose.yml`](https://github.com/Knuckles-Team/media-downloader/blob/main/docker/agent.compose.yml),
 which provisions the MCP server and the agent together. The agent waits on the MCP
 server and is wired to it by container name:
 
@@ -183,7 +181,6 @@ services:
       - TRANSPORT=streamable-http
     ports: ["8000:8000"]
 
-  media-downloader-agent:
     image: example/media-downloader@sha256:<digest>
     depends_on: [media-downloader-mcp]
     command: ["media-downloader-agent"]
@@ -198,13 +195,11 @@ services:
 ```
 
 ```bash
-docker compose -f docker/agent.compose.yml up -d
 ```
 
 | Service | Port | Role |
 |---|---|---|
 | `media-downloader-mcp` | `8000` | MCP tool surface (`/mcp`, `/health`) |
-| `media-downloader-agent` | `9000` | A2A agent + web UI, wired via `MCP_URL` |
 
 ## Behind a Caddy reverse proxy
 

@@ -9,7 +9,6 @@ from fastmcp import Context, FastMCP
 
 # Import under an alias to avoid name conflict with the CLI function media_downloader
 import media_downloader as md_package
-from media_downloader.agent_server import agent_server
 from media_downloader.mcp_server import get_mcp_instance, mcp_server
 from media_downloader.media_downloader import (
     MediaDownloader,
@@ -22,56 +21,6 @@ from media_downloader.media_downloader import (
 # =====================================================================
 
 
-@pytest.fixture(autouse=True, scope="module")
-def mock_agent_utilities_and_mcp():
-    mock_args = MagicMock()
-    mock_args.transport = "stdio"
-    mock_args.auth_type = "none"
-    mock_args.host = "127.0.0.1"
-    mock_args.port = 8000
-    mock_args.debug = True
-    mock_args.mcp_url = "http://localhost:8000"
-    mock_args.mcp_config = "custom_config.json"
-    mock_args.provider = "openai"
-    mock_args.model_id = "gpt-4o"
-    mock_args.base_url = "http://custom_base"
-    mock_args.api_key = "secret_key"
-    mock_args.custom_skills_directory = "/tmp/skills"
-    mock_args.web = True
-    mock_args.otel = False
-    mock_args.otel_endpoint = None
-    mock_args.otel_headers = None
-    mock_args.otel_public_key = None
-    mock_args.otel_secret_key = None
-    mock_args.otel_protocol = None
-
-    # Use a real FastMCP instance so prompts and tools registration/rendering works flawlessly
-    local_mcp = FastMCP("MediaDownloader")
-
-    with (
-        patch(
-            "agent_connector_sdk.mcp.server.create_mcp_server",
-            return_value=(mock_args, local_mcp, []),
-        ) as mock_create_mcp,
-        patch("agent_utilities.initialize_workspace"),
-        patch(
-            "agent_utilities.load_identity",
-            return_value={"name": "Agent", "description": "Desc", "content": "Prompt"},
-        ),
-        patch(
-            "agent_utilities.build_system_prompt_from_workspace",
-            return_value="System Prompt",
-        ),
-        patch(
-            "media_downloader.agent_server.create_agent_server"
-        ) as mock_create_agent_server,
-    ):
-        yield {
-            "mock_create_mcp": mock_create_mcp,
-            "local_mcp": local_mcp,
-            "mock_args": mock_args,
-            "mock_create_agent_server": mock_create_agent_server,
-        }
 
 
 @pytest.fixture(autouse=True)
@@ -549,53 +498,6 @@ def test_mcp_server_entrypoint(mock_get_instance):
 # =====================================================================
 
 
-@patch("media_downloader.agent_server.create_agent_server")
-@patch("media_downloader.agent_server.create_agent_parser")
-def test_agent_server_entrypoint(mock_parser, mock_create_server):
-    mock_args = MagicMock()
-    mock_args.debug = True
-    mock_args.mcp_url = "http://localhost:8000"
-    mock_args.mcp_config = "custom_config.json"
-    mock_args.host = "127.0.0.1"
-    mock_args.port = 8500
-    mock_args.provider = "openai"
-    mock_args.model_id = "gpt-4o"
-    mock_args.base_url = "http://custom_base"
-    mock_args.api_key = "secret_key"
-    mock_args.custom_skills_directory = "/tmp/skills"
-    mock_args.web = True
-    mock_args.otel = False
-    mock_args.otel_endpoint = None
-    mock_args.otel_headers = None
-    mock_args.otel_public_key = None
-    mock_args.otel_secret_key = None
-    mock_args.otel_protocol = None
-
-    mock_parser.return_value.parse_args.return_value = mock_args
-
-    agent_server()
-
-    mock_create_server.assert_called_once_with(
-        mcp_url="http://localhost:8000",
-        mcp_config="custom_config.json",
-        host="127.0.0.1",
-        port=8500,
-        provider="openai",
-        model_id="gpt-4o",
-        router_model="gpt-4o",
-        agent_model="gpt-4o",
-        base_url="http://custom_base",
-        api_key="secret_key",
-        custom_skills_directory="/tmp/skills",
-        enable_web_ui=True,
-        enable_otel=False,
-        otel_endpoint=None,
-        otel_headers=None,
-        otel_public_key=None,
-        otel_secret_key=None,
-        otel_protocol=None,
-        debug=True,
-    )
 
 
 # =====================================================================
@@ -603,11 +505,6 @@ def test_agent_server_entrypoint(mock_parser, mock_create_server):
 # =====================================================================
 
 
-@patch("sys.argv", ["media_downloader"])
-@patch("media_downloader.agent_server.agent_server")
-def test_main_exec(mock_agent_server):
-    runpy.run_module("media_downloader.__main__", run_name="__main__")
-    mock_agent_server.assert_called_once()
 
 
 # =====================================================================
@@ -615,25 +512,6 @@ def test_main_exec(mock_agent_server):
 # =====================================================================
 
 
-def test_package_init_attributes():
-    # Test __dir__ works
-    dir_list = dir(md_package)
-    assert "MediaDownloader" in dir_list
-
-    # Test availability flags
-    assert md_package._MCP_AVAILABLE is True
-    assert (
-        md_package._AGENT_AVAILABLE is True
-        or md_package._agent_server_AVAILABLE is not None
-    )
-
-    # Test loading agent and mcp attributes dynamically
-    assert md_package.agent_server is agent_server
-    assert md_package.get_mcp_instance is get_mcp_instance
-
-    # Test attribute error
-    with pytest.raises(AttributeError):
-        _ = md_package.non_existent_key
 
 
 # =====================================================================
@@ -648,18 +526,8 @@ def test_import_module_safely_error():
         assert res is None
 
 
-def test_getattr_missing_optional_module():
-    # Patches md_package.OPTIONAL_MODULES to be empty to cover lines 52 and 57 of __init__.py
-    with patch.dict(md_package.OPTIONAL_MODULES, {}, clear=True):
-        assert md_package._MCP_AVAILABLE is False
-        assert md_package._AGENT_AVAILABLE is False
 
 
-def test_getattr_non_exposed_member():
-    # Looks up a private/non-exposed member from an optional module to cover line 69 of __init__.py
-    # "DEFAULT_AGENT_NAME" is inside agent_server but not exposed via _expose_members (since it is not a class or function)
-    val = md_package.DEFAULT_AGENT_NAME
-    assert isinstance(val, str)
 
 
 def test_requests_dependency_warning_import_error():
@@ -669,22 +537,6 @@ def test_requests_dependency_warning_import_error():
         importlib.reload(sys.modules["media_downloader.mcp_server"])
 
 
-def test_agent_server_main_block():
-    # Runs the main block of agent_server.py (line 80) without locking the database or hitting workspace loading
-    with (
-        patch("sys.argv", ["media_downloader"]),
-        patch("agent_utilities.initialize_workspace"),
-        patch("agent_utilities.load_identity") as mock_load,
-        patch("agent_utilities.build_system_prompt_from_workspace"),
-        patch("agent_utilities.create_agent_server") as mock_create,
-    ):
-        mock_load.return_value = {
-            "name": "Agent",
-            "description": "Desc",
-            "content": "Prompt",
-        }
-        runpy.run_module("media_downloader.agent_server", run_name="__main__")
-        mock_create.assert_called_once()
 
 
 def test_mcp_server_main_block():
@@ -795,3 +647,13 @@ async def test_mcp_tool_watch_media_hides_exception_detail(mock_downloader_class
     mock_instance.watch.assert_called_once()
     assert result == {"status": "error", "message": "Watch request failed"}
     assert "boom" not in str(result)
+
+
+def test_default_skills_root_override_and_sdk_data_dir(monkeypatch, tmp_path):
+    from media_downloader.media_downloader import default_skills_root
+
+    monkeypatch.setenv("MEDIA_DOWNLOADER_SKILLS_DIR", str(tmp_path / "s"))
+    assert default_skills_root() == tmp_path / "s"
+    monkeypatch.delenv("MEDIA_DOWNLOADER_SKILLS_DIR")
+    monkeypatch.setenv("CONNECTOR_DATA_DIR", str(tmp_path / "d"))
+    assert default_skills_root() == tmp_path / "d" / "skills"
