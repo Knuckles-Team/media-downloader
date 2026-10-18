@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the agent-utilities ecosystem.">
+        <meta name="description" content="CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the agent-connector-sdk ecosystem.">
       
       
       
@@ -867,13 +867,13 @@
 <h1 id="media-downloader-concept-overview">media-downloader — Concept Overview<a class="headerlink" href="#media-downloader-concept-overview" title="Permanent link">&para;</a></h1>
 <blockquote>
 <p><strong>Category</strong>: Media | <strong>Ecosystem Role</strong>: MCP Server + A2A Agent
-Built on <a href="https://github.com/Knuckles-Team/agent-utilities"><code>agent-utilities</code></a> — the unified AGI Harness.</p>
+Built on <a href="https://github.com/Knuckles-Team/agent-connector-sdk"><code>agent-connector-sdk</code></a> — the unified AGI Harness.</p>
 </blockquote>
 <h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h2>
 <p>Download audio/videos from the internet!
 Host an MCP Server for Agentic AI to download videos!</p>
 <h2 id="enterprise-readiness">Enterprise Readiness<a class="headerlink" href="#enterprise-readiness" title="Permanent link">&para;</a></h2>
-<p>All agents in the ecosystem inherit enterprise-grade infrastructure from <code>agent-utilities</code>:</p>
+<p>All agents in the ecosystem inherit enterprise-grade infrastructure from <code>agent-connector-sdk</code>:</p>
 <table>
 <thead>
 <tr>
@@ -886,17 +886,17 @@ Host an MCP Server for Agentic AI to download videos!</p>
 <tr>
 <td style="text-align: left;"><strong>JWT/OIDC Authentication</strong></td>
 <td style="text-align: left;">✅ Built-in</td>
-<td style="text-align: left;"><code>agent-utilities[auth]</code> — Authlib JWKS + API key middleware</td>
+<td style="text-align: left;"><code>agent-connector-sdk</code> — Authlib JWKS + API key middleware</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>OpenTelemetry Instrumentation</strong></td>
 <td style="text-align: left;">✅ Built-in</td>
-<td style="text-align: left;"><code>agent-utilities[logfire]</code> — OTLP export, FastAPI auto-instrumentation</td>
+<td style="text-align: left;"><code>agent-connector-sdk</code> — OTLP export, FastAPI auto-instrumentation</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>HashiCorp Vault Integration</strong></td>
 <td style="text-align: left;">✅ Built-in</td>
-<td style="text-align: left;"><code>agent-utilities[vault]</code> — <code>secret://</code>, <code>env://</code>, <code>vault://</code> URI schemes</td>
+<td style="text-align: left;"><code>agent-connector-sdk</code> — <code>secret://</code>, <code>env://</code>, <code>vault://</code> URI schemes</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>Audit Logging</strong></td>
@@ -949,12 +949,12 @@ Host an MCP Server for Agentic AI to download videos!</p>
 <tr>
 <td style="text-align: left;">ECO-4.1</td>
 <td style="text-align: left;">MCP &amp; Universal Skills</td>
-<td style="text-align: left;"><code>agent-utilities</code> (inherited)</td>
+<td style="text-align: left;"><code>agent-connector-sdk</code> (inherited)</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>📖 <strong>Full Registry</strong>: See <a href="https://github.com/Knuckles-Team/agent-utilities/blob/main/docs/overview.md"><code>agent-utilities/docs/overview.md</code></a> for the complete 5-Pillar concept index.</p>
+<p>📖 <strong>Full Registry</strong>: See <a href="https://github.com/Knuckles-Team/agent-connector-sdk/blob/main/docs/overview.md"><code>agent-connector-sdk/docs/overview.md</code></a> for the complete 5-Pillar concept index.</p>
 </blockquote>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
 <p>This project follows the standardized agent-package pattern:</p>

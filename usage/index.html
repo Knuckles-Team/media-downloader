@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the agent-utilities ecosystem.">
+        <meta name="description" content="CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the agent-connector-sdk ecosystem.">
       
       
       
@@ -856,7 +856,7 @@ callbacks.</p>
 <p>Queue URLs from a file, or list a channel:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">downloader</span> <span class="o">=</span> <span class="n">MediaDownloader</span><span class="p">(</span><span class="n">download_directory</span><span class="o">=</span><span class="s2">"./Downloads"</span><span class="p">)</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">downloader</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="s2">"urls.txt"</span><span class="p">)</span>            <span class="c1"># one URL per line, de-duplicated</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">downloader</span><span class="o">.</span><span class="n">open_file</span><span class="p">(</span><span class="s2">"urls.txt"</span><span class="p">)</span>  <span class="c1"># one URL per line, de-duplicated</span>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">downloader</span><span class="o">.</span><span class="n">get_channel_videos</span><span class="p">(</span><span class="s2">"SomeChannel"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">downloader</span><span class="o">.</span><span class="n">download_all</span><span class="p">()</span>
 </span></code></pre></div>
@@ -864,8 +864,9 @@ callbacks.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_progress</span><span class="p">(</span><span class="n">progress</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">progress</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">% of </span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">downloader</span><span class="o">.</span><span class="n">set_progress_callback</span><span class="p">(</span><span class="n">on_progress</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">downloader</span><span class="o">.</span><span class="n">download_video</span><span class="p">(</span><span class="s2">"https://www.youtube.com/watch?v=dQw4w9WgXcQ"</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">downloader</span><span class="o">.</span><span class="n">set_progress_callback</span><span class="p">(</span><span class="n">on_progress</span><span class="p">)</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">downloader</span><span class="o">.</span><span class="n">download_video</span><span class="p">(</span><span class="s2">"https://www.youtube.com/watch?v=dQw4w9WgXcQ"</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="as-a-cli">As a CLI<a class="headerlink" href="#as-a-cli" title="Permanent link">&para;</a></h2>
 <p>The <code>media-downloader</code> console script downloads from the command line:</p>
