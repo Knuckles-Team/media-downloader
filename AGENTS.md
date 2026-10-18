@@ -77,6 +77,7 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = create_mcp_server("my-agent")
 
+
 @mcp.tool()
 async def my_tool(param: str) -> str:
     """Description for LLM."""

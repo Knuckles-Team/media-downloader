@@ -34,7 +34,7 @@ from pydantic import Field
 
 from media_downloader.media_downloader import MediaDownloader
 
-__version__ = "4.2.0"
+__version__ = "4.3.0"
 
 logger = get_logger("MediaDownloaderMCPServer")
 logger.setLevel(logging.INFO)
