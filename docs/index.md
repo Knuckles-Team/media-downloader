@@ -1,7 +1,7 @@
 # media-downloader
 
 A **CLI / API + MCP server + A2A agent** for downloading audio and video from the
-internet — built on `yt-dlp` and the agent-utilities ecosystem.
+internet — built on `yt-dlp` and the agent-connector-sdk ecosystem.
 
 !!! info "Official documentation"
     This site is the canonical reference for `media-downloader`, maintained alongside
@@ -25,7 +25,7 @@ the same capability three ways:
 - **A Pydantic-AI agent** (`media-downloader-agent`) — a conversational A2A server
   with an optional web UI that drives the MCP tool surface.
 
-Every layer inherits the agent-utilities enterprise foundation: OpenTelemetry
+Every layer inherits the agent-connector-sdk enterprise foundation: OpenTelemetry
 tracing, Eunomia policy authorization, and prompt-injection defenses.
 
 ## Explore the documentation

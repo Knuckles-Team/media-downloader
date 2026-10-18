@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-import platformdirs
 import yaml
 import yt_dlp
 
@@ -30,7 +29,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.2.0"
+__version__ = "4.3.0"
 
 logger = logging.getLogger("MediaDownloader")
 
@@ -766,17 +765,17 @@ def _bumped(version: str) -> str:
 def default_skills_root() -> Path:
     """Where video-built skills live by default.
 
-    The fleet centralises operator-owned skills in one XDG location:
-    `~/.local/share/agent-utilities/skills/`, overridable with
-    `AGENT_UTILITIES_SKILLS_DIR`. Mirrors `agent_utilities.core.paths.skills_dir`
-    exactly (same env var, same default) without importing agent_utilities, so
-    this package cannot drift from the rest of the fleet. Its documented flat
-    `skills/<skill>/SKILL.md` layout is what `build_skill` writes.
+    ``MEDIA_DOWNLOADER_SKILLS_DIR`` when set, else ``<connector data dir>/skills``
+    (``agent_connector_sdk.paths.data_dir``). The documented flat
+    ``skills/<skill>/SKILL.md`` layout is what ``build_skill`` writes.
     """
-    override = os.environ.get("AGENT_UTILITIES_SKILLS_DIR")
+    from agent_connector_sdk.config import setting
+    from agent_connector_sdk.paths import data_dir
+
+    override = setting("MEDIA_DOWNLOADER_SKILLS_DIR", "")
     if override:
-        return Path(override).expanduser()
-    return Path(platformdirs.user_data_path("agent-utilities", "knuckles-team")) / "skills"
+        return Path(str(override)).expanduser()
+    return data_dir() / "skills"
 
 
 def skill_sources(skill_dir: Path) -> list[dict]:

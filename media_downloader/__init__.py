@@ -9,7 +9,6 @@ __all__: list[str] = []
 CORE_MODULES: list[str] = ["media_downloader.media_downloader"]
 
 OPTIONAL_MODULES = {
-    "media_downloader.agent_server": "agent",
     "media_downloader.mcp_server": "mcp",
 }
 
@@ -45,7 +44,6 @@ def _import_module_safely(module_name: str):
 
 _AVAILABILITY_MARKERS = {
     "_MCP_AVAILABLE": "mcp_server",
-    "_AGENT_AVAILABLE": "agent_server",
 }
 
 
