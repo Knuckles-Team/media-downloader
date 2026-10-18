@@ -29,7 +29,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.3.0"
+__version__ = "4.3.1"
 
 logger = logging.getLogger("MediaDownloader")
 
