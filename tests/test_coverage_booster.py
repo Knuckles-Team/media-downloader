@@ -657,3 +657,16 @@ def test_default_skills_root_override_and_sdk_data_dir(monkeypatch, tmp_path):
     monkeypatch.delenv("MEDIA_DOWNLOADER_SKILLS_DIR")
     monkeypatch.setenv("CONNECTOR_DATA_DIR", str(tmp_path / "d"))
     assert default_skills_root() == tmp_path / "d" / "skills"
+
+
+@patch("media_downloader.media_downloader.safe_metadata_get")
+def test_get_channel_videos_returns_links(mock_get):
+    """The MCP tool surface returns the method result, so it must return the links."""
+    resp = MagicMock()
+    resp.content = b'<a href="/watch?v=aaa"> <a href="/watch?v=bbb"> <a href="/watch?v=ccc">'
+    mock_get.return_value = resp
+
+    downloader = MediaDownloader()
+    result = downloader.get_channel_videos("YouTube", limit=2)
+    assert len(result) == 2
+    assert result == downloader.links

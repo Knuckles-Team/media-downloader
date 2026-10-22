@@ -29,7 +29,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.4.0"
+__version__ = "4.4.1"
 
 logger = logging.getLogger("MediaDownloader")
 
@@ -1056,9 +1056,12 @@ class MediaDownloader:
         )
 
     def _append_links(self, vids, limit):
+        added = []
         for x, vid in enumerate(vids):
             if limit < 0 or x < limit:
                 self.links.append(vid)
+                added.append(vid)
+        return added
 
     @staticmethod
     def _canonical_channel_video_links(page_content):
@@ -1097,6 +1100,7 @@ class MediaDownloader:
         )
 
     def get_channel_videos(self, channel, limit=-1):
+        """Find a channel's video links; queue them on ``self.links`` and return them."""
         self.logger.debug("Fetching videos for a channel (limit=%s)", limit)
         username = channel
         for _attempt in range(3):
@@ -1108,9 +1112,9 @@ class MediaDownloader:
                 vids = extract_links(page)
                 if vids:
                     self.logger.debug(f"Found {len(vids)} videos")
-                    self._append_links(vids, limit)
-                    return
+                    return self._append_links(vids, limit)
         self.logger.error("Could not find the requested channel")
+        return []
 
     def progress_hook(self, d):
         if self.progress_callback and d["status"] == "downloading":
