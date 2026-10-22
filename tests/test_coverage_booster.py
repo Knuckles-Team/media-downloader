@@ -671,3 +671,23 @@ def test_get_channel_videos_returns_links(mock_get):
     result = downloader.get_channel_videos("YouTube", limit=2)
     assert len(result) == 2
     assert result == downloader.links
+
+
+@pytest.mark.spec("CONN-MEDIA-DOWNLOADER-R001.1")
+@patch("media_downloader.media_downloader.safe_metadata_get")
+def test_get_channel_videos_reads_embedded_video_ids(mock_get):
+    """A channel page lists its videos only in the embedded initial data."""
+    resp = MagicMock()
+    resp.content = (
+        b'{"videoId":"yjHvkMeVzK0","thumbnail":{"url":"https://i.ytimg.com/vi/'
+        b'yjHvkMeVzK0/hq720_custom_1.jpg"}},{"videoId":"yjHvkMeVzK0"},'
+        b'{"videoId":"71ya_JC_IbM"},{"videoId":"abcdefghijk"}'
+    )
+    mock_get.return_value = resp
+
+    result = MediaDownloader().get_channel_videos("YouTube", limit=2)
+    assert result == [
+        "https://www.youtube.com/watch?v=yjHvkMeVzK0",
+        "https://www.youtube.com/watch?v=71ya_JC_IbM",
+    ]
+    assert mock_get.call_args_list[0].args[0] == "https://www.youtube.com/user/YouTube/videos"

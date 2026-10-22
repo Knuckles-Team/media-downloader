@@ -10,6 +10,8 @@ The SDK tool surface registers each public `MediaDownloader` method as a tool. T
 
 `get_channel_videos` tries each channel URL form. `_append_links` queues the links on `self.links` and returns the queued links. `get_channel_videos` returns that list.
 
+A channel page lists its videos in embedded initial data, not in `href` anchors. `_canonical_channel_video_links` reads the `videoId` values when it finds no anchor.
+
 ## Interfaces and data model
 
 The tool returns a list of video URLs. The `channel` and `limit` arguments do not change.

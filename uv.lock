@@ -952,7 +952,7 @@ wheels = [
 
 [[package]]
 name = "media-downloader"
-version = "4.4.1"
+version = "4.4.2"
 source = { editable = "." }
 dependencies = [
     { name = "agent-connector-sdk", extra = ["mcp"] },

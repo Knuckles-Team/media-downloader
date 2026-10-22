@@ -29,7 +29,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.4.1"
+__version__ = "4.4.2"
 
 logger = logging.getLogger("MediaDownloader")
 
@@ -1067,7 +1067,8 @@ class MediaDownloader:
     def _canonical_channel_video_links(page_content):
         data = str(page_content).split(" ")
         item = 'href="/watch?'
-        return [line.replace('href="', "youtube.com") for line in data if item in line]
+        links = [line.replace('href="', "youtube.com") for line in data if item in line]
+        return links or MediaDownloader._embedded_channel_video_links(page_content)
 
     @staticmethod
     def _alternate_channel_video_links(page_content):
@@ -1084,6 +1085,14 @@ class MediaDownloader:
             if match:
                 vids.append(f"https://www.youtube.com/watch?v={match.group(1)}")
         return vids
+
+    @staticmethod
+    def _embedded_channel_video_links(page_content):
+        """Read the video IDs from the page's embedded initial data, in page order."""
+        if isinstance(page_content, bytes):
+            page_content = page_content.decode("utf-8", "replace")
+        ids = re.findall(r'"videoId":"([A-Za-z0-9_-]{11})"', str(page_content))
+        return [f"https://www.youtube.com/watch?v={vid}" for vid in dict.fromkeys(ids)]
 
     def _channel_video_url_candidates(self, channel, username):
         return (
