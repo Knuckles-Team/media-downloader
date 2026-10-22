@@ -4,7 +4,8 @@
   "owner_repo": "media-downloader",
   "delivery_state": "VERIFIED",
   "requirement_ids": [
-    "CONN-MEDIA-DOWNLOADER-R001"
+    "CONN-MEDIA-DOWNLOADER-R001",
+    "CONN-MEDIA-DOWNLOADER-R001.1"
   ],
   "requirements": [
     {
@@ -16,6 +17,20 @@
       ],
       "verified_by": [
         "tests/test_coverage_booster.py:662"
+      ],
+      "rollup_of": [
+        "CONN-MEDIA-DOWNLOADER-R001.1"
+      ]
+    },
+    {
+      "id": "CONN-MEDIA-DOWNLOADER-R001.1",
+      "title": "Embedded video IDs read",
+      "delivery_state": "VERIFIED",
+      "landed_in": [
+        "041d8285b8f2"
+      ],
+      "verified_by": [
+        "tests/test_coverage_booster.py:676"
       ]
     }
   ]
