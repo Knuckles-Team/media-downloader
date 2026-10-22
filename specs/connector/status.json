@@ -2,7 +2,7 @@
   "schema_version": 2,
   "spec_id": "CONN-MEDIA-DOWNLOADER",
   "owner_repo": "media-downloader",
-  "delivery_state": "SPECIFIED",
+  "delivery_state": "VERIFIED",
   "requirement_ids": [
     "CONN-MEDIA-DOWNLOADER-R001"
   ],
@@ -10,8 +10,10 @@
     {
       "id": "CONN-MEDIA-DOWNLOADER-R001",
       "title": "Channel video links returned",
-      "delivery_state": "SPECIFIED",
-      "landed_in": [],
+      "delivery_state": "VERIFIED",
+      "landed_in": [
+        "2af9b552d7bc"
+      ],
       "verified_by": [
         "tests/test_coverage_booster.py:662"
       ]
