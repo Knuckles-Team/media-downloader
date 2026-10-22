@@ -12,4 +12,4 @@ Read the existing specs first. Extend the spec that owns the behavior. Create a 
 
 ## Local specifications
 
-This repository has no local spec yet.
+[`CONN-MEDIA-DOWNLOADER`](connector/spec.md) — The connector lists the video links of a YouTube channel.

@@ -659,6 +659,7 @@ def test_default_skills_root_override_and_sdk_data_dir(monkeypatch, tmp_path):
     assert default_skills_root() == tmp_path / "d" / "skills"
 
 
+@pytest.mark.spec("CONN-MEDIA-DOWNLOADER-R001")
 @patch("media_downloader.media_downloader.safe_metadata_get")
 def test_get_channel_videos_returns_links(mock_get):
     """The MCP tool surface returns the method result, so it must return the links."""
