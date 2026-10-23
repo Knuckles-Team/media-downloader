@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "spec_id": "CONN-MEDIA-DOWNLOADER-CONNECTOR-CONTENT",
+  "owner_repo": "media-downloader",
+  "delivery_state": "VERIFIED",
+  "requirement_ids": [
+    "CONN-MEDIA-DOWNLOADER-CONNECTOR-CONTENT-R001"
+  ],
+  "requirements": [
+    {
+      "id": "CONN-MEDIA-DOWNLOADER-CONNECTOR-CONTENT-R001",
+      "title": "Default content",
+      "delivery_state": "VERIFIED",
+      "landed_in": [
+        "2d0e9ff5ba80"
+      ],
+      "verified_by": [
+        "tests/test_default_content_surfaces.py:15"
+      ]
+    }
+  ]
+}
