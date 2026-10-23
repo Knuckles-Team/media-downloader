@@ -27,5 +27,4 @@
 
 <http://knuckles.team/kg/media-downloader> a owl:Ontology ;
     rdfs:label "Media downloader artifact and occurrence ontology" ;
-    rdfs:comment "Content-addressed media identity separated from privacy-scoped source occurrences and derived renditions." ;
-    owl:imports <http://knuckles.team/kg> .
+    rdfs:comment "Content-addressed media identity separated from privacy-scoped source occurrences and derived renditions." .
