@@ -39,7 +39,7 @@ logger = logging.getLogger("MediaDownloader.kg")
 # This connector's own manifest declares `MediaArtifact` (not the SDK's generic
 # `MediaAsset` default) as the resource a stored media blob becomes.
 _BINDING = IngestBinding(
-    connector="media-downloader", stream="media", media_type="MediaArtifact"
+    connector="media-downloader-mcp", stream="media", media_type="MediaArtifact"
 )
 
 # yt-dlp info keys worth carrying onto the MediaArtifact node.

@@ -1,4 +1,4 @@
-connector: media-downloader
+connector: media-downloader-mcp
 ontology_source: media-downloader
 schema_version: '1'
 resources:
