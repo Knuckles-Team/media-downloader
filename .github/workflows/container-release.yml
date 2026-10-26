@@ -55,6 +55,7 @@ jobs:
     needs: verify-public-wheel
     uses: Knuckles-Team/pipelines/.github/workflows/container_pipeline.yml@main
     with:
+      render_connector: false
       release_repair: ${{ inputs.release_repair || false }}
       legacy_profile: ${{ inputs.legacy_profile || false }}
       release_source_sha: ${{ inputs.release_source_sha || '' }}
