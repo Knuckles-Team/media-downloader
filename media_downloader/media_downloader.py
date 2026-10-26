@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 
 import yaml
 import yt_dlp
+from agent_connector_sdk.connector_identity import connector_version
 
 from media_downloader.security import (
     MediaSecurityError,
@@ -29,7 +30,7 @@ from media_downloader.security import (
     validate_media_url,
 )
 
-__version__ = "4.4.4"
+__version__ = connector_version("media_downloader")
 
 logger = logging.getLogger("MediaDownloader")
 

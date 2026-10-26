@@ -26,7 +26,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_connector_sdk.config import load_config
-from agent_connector_sdk.mcp.server import create_mcp_server
+from agent_connector_sdk.connector import build_server
+from agent_connector_sdk.connector_identity import connector_version
 from agent_connector_sdk.mcp.tool_surface import register_tool_surface
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.logging import get_logger
@@ -34,7 +35,7 @@ from pydantic import Field
 
 from media_downloader.media_downloader import MediaDownloader
 
-__version__ = "4.4.4"
+__version__ = connector_version("media_downloader")
 
 logger = get_logger("MediaDownloaderMCPServer")
 logger.setLevel(logging.INFO)
@@ -57,15 +58,16 @@ def register_prompts(mcp: FastMCP):
         return f"Download the following media as audio only: {audio_url}."
 
 
-def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
+def get_mcp_instance(*, command_args=None) -> tuple[Any, Any, Any, list[str]]:
     """Initialize and return the MCP instance, args, and middlewares."""
     load_config()
 
-    args, mcp, middlewares = create_mcp_server(
-        name="MediaDownloader",
-        version=__version__,
-        instructions="Media Downloader MCP Server - Download videos and audio from various platforms.",
-    )
+    args, mcp = build_server("media_downloader", command_args=command_args)
+    return mcp, args, list(mcp.middleware), mcp._media_registered_tags
+
+
+def register_server_surface(mcp: FastMCP) -> list[str]:
+    """Register existing media tools and prompts without changing their bodies."""
 
     @mcp.tool(name="download_media")
     async def download_media(
@@ -282,9 +284,7 @@ def get_mcp_instance() -> tuple[Any, Any, Any, list[str]]:
 
     register_prompts(mcp)
 
-    for mw in middlewares:
-        mcp.add_middleware(mw)
-    return mcp, args, middlewares, registered_tags
+    return registered_tags
 
 
 def mcp_server() -> None:
