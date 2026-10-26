@@ -1,0 +1,40 @@
+name: Publish released connector containers
+
+on:
+  push:
+    branches: [main]
+    paths: [docker/Dockerfile]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Checkout release contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Knuckles-Team/pipelines
+          ref: main
+          path: .pipeline-contract
+          persist-credentials: false
+      - name: Verify published package payload and container pin
+        uses: ./.pipeline-contract/.github/actions/verify-release-version
+        with:
+          mode: published-wheel
+          distribution: media-downloader
+          module: media_downloader
+  publish-docker:
+    needs: verify-public-wheel
+    uses: Knuckles-Team/pipelines/.github/workflows/container_pipeline.yml@main
+    permissions:
+      contents: read
+    secrets:
+      DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}

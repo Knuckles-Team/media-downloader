@@ -81,3 +81,21 @@ def __getattr__(name: str) -> Any:
 
 def __dir__() -> list[str]:
     return sorted(list(globals().keys()) + __all__)
+
+
+from agent_connector_sdk.connector import Connector
+from agent_connector_sdk.connector_hooks import RegistrationContext
+
+
+def _register_legacy_surface(context: RegistrationContext) -> None:
+    from media_downloader.mcp_server import register_server_surface
+
+    vars(context.server)["_media_registered_tags"] = register_server_surface(
+        context.server
+    )
+
+
+connector = Connector(
+    instructions="Media Downloader MCP Server - Download videos and audio from various platforms.",
+    extra_registrations=(_register_legacy_surface,),
+)
