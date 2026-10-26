@@ -4,6 +4,28 @@ on:
   push:
     branches: [main]
     paths: [docker/Dockerfile]
+  workflow_dispatch:
+    inputs:
+      release_repair:
+        description: Reviewed repair of an already published wheel and connector container.
+        required: false
+        default: false
+        type: boolean
+      legacy_profile:
+        description: Preserve the reviewed tracked wheel-only package and custom Dockerfile.
+        required: false
+        default: false
+        type: boolean
+      release_source_sha:
+        description: Full immutable source SHA that originally produced the public wheel.
+        required: false
+        default: ''
+        type: string
+      release_source_epoch:
+        description: Exact SOURCE_DATE_EPOCH used to generate the public wheel.
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -23,6 +45,7 @@ jobs:
           path: .pipeline-contract
           persist-credentials: false
       - name: Verify published package payload and container pin
+        if: inputs.release_repair != true
         uses: ./.pipeline-contract/.github/actions/verify-release-version
         with:
           mode: published-wheel
@@ -31,6 +54,12 @@ jobs:
   publish-docker:
     needs: verify-public-wheel
     uses: Knuckles-Team/pipelines/.github/workflows/container_pipeline.yml@main
+    with:
+      render_connector: false
+      release_repair: ${{ inputs.release_repair || false }}
+      legacy_profile: ${{ inputs.legacy_profile || false }}
+      release_source_sha: ${{ inputs.release_source_sha || '' }}
+      release_source_epoch: ${{ inputs.release_source_epoch || '' }}
     permissions:
       contents: read
     secrets:
