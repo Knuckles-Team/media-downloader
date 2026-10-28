@@ -141,7 +141,7 @@ When query strings or parameters are supplied, an LLM-free **Knowledge Graph res
         "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
         "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
         "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
-        "WORKSPACE_PATH": "/workspace"
+        "WORKSPACE_PATH": "workspace"
       }
     }
   }
@@ -176,7 +176,7 @@ own runtime secret boundary.
         "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
         "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
         "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
-        "WORKSPACE_PATH": "/workspace"
+        "WORKSPACE_PATH": "workspace"
       }
     }
   }
@@ -210,7 +210,7 @@ docker run -i --rm \
   -e MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS=media.internal.example \
   -e MEDIA_DOWNLOADER_MAX_WORKERS=4 \
   -e MEDIA_DOWNLOADER_OUTPUT_ROOT=/data/media \
-  -e WORKSPACE_PATH=/workspace \
+  -e WORKSPACE_PATH=workspace \
   registry.example.invalid/media-downloader@sha256:<digest> media-downloader-mcp
 ```
 
@@ -359,7 +359,7 @@ Built directly upon the enterprise-ready [`agent-connector-sdk`](https://github.
 | `MEDIA_DOWNLOADER_MCP_IMAGE` | `knucklessg1/media-downloader@sha256:<digest>` | Required by the hardened compose profiles — no floating tag is assumed. Point these at an immutable digest of a reviewed image before running `docker compose up`. |
 | `MEDIA_DOWNLOADER_AGENT_IMAGE` | `knucklessg1/media-downloader@sha256:<digest>` |  |
 | `MEDIA_DOWNLOADER_OUTPUT_ROOT` | `/data/media` | Every download is written beneath this root; a path that escapes it is rejected. Falls back to WORKSPACE_PATH, then ~/Downloads. |
-| `WORKSPACE_PATH` | `/workspace` |  |
+| `WORKSPACE_PATH` | `workspace` |  |
 | `MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS` | `media.internal.example` | Exact hostnames allowed to resolve to a private address. Downloads are restricted to publicly routable hosts otherwise; no wildcards are accepted. |
 | `MEDIA_DOWNLOADER_MAX_WORKERS` | `4` | Parallel download workers, clamped to 1-4. |
 
