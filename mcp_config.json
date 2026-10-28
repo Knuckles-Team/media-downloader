@@ -10,7 +10,7 @@
         "MEDIA_DOWNLOADER_ALLOW_PRIVATE_HOSTS": "media.internal.example",
         "MEDIA_DOWNLOADER_MAX_WORKERS": "4",
         "MEDIA_DOWNLOADER_OUTPUT_ROOT": "/data/media",
-        "WORKSPACE_PATH": "/workspace"
+        "WORKSPACE_PATH": "workspace"
       }
     }
   }
