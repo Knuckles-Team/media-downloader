@@ -77,7 +77,6 @@ def _no_outbound_network(monkeypatch):
 
 def test_sdk_floor_supports_content_identity_and_current_pack_protocol() -> None:
     import tomllib
-
     from packaging.requirements import Requirement
 
     project = tomllib.loads((ROOT.parent / "pyproject.toml").read_text())["project"]
