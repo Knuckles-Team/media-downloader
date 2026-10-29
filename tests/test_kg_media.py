@@ -27,7 +27,9 @@ class _FakeTransport:
         self.requests = []
 
     async def source_status(self, _connector, _stream):
-        return SimpleNamespace(accepted_checkpoint=None)
+        return SimpleNamespace(
+            connector=_connector, stream=_stream, accepted_checkpoint=None
+        )
 
     async def submit(self, request):
         self.requests.append(request)
@@ -131,7 +133,12 @@ def test_download_video_invokes_native_ingest(monkeypatch, tmp_path):
     def _fake_ingest(path, **kw):
         captured["path"] = path
         captured["kw"] = kw
-        return {"asset_id": "media:x", "digest": "x", "size_bytes": 1, "media_type": "video"}
+        return {
+            "asset_id": "media:x",
+            "digest": "x",
+            "size_bytes": 1,
+            "media_type": "video",
+        }
 
     monkeypatch.setattr("media_downloader.kg_media.ingest_media_file", _fake_ingest)
     dl._maybe_ingest("/tmp/out.mp4", {"id": "z"}, "https://example.test/z")
