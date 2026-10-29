@@ -35,7 +35,9 @@ async def _listings():
 
     async with Client(_server(), mode="legacy") as client:
         assert client.initialize_result is not None
-        assert client.initialize_result.server_info.version == version("media-downloader")
+        assert client.initialize_result.server_info.version == version(
+            "media-downloader"
+        )
         resources = {str(r.uri) for r in await client.list_resources()}
         prompts = {p.name for p in await client.list_prompts()}
         for uri in resources:
@@ -85,7 +87,7 @@ def test_sdk_floor_supports_content_identity_and_current_pack_protocol() -> None
     sdk = [Requirement(value) for value in declared if value.startswith("scion-sdk")]
     assert sdk
     for requirement in sdk:
-        assert requirement.specifier.contains("0.5.6")
+        assert requirement.specifier.contains("0.5.9")
         assert not requirement.specifier.contains("0.5.5")
 
 
@@ -103,7 +105,9 @@ def test_production_pack_binds_packaged_ontology_and_shapes():
             TransportEndpoint(in_process=_server())
         ) as session:
             return await build_content_pack(
-                session, connector="media-downloader-mcp", kinds=(ResourceArtifactKind(),)
+                session,
+                connector="media-downloader-mcp",
+                kinds=(ResourceArtifactKind(),),
             )
 
     pack = asyncio.run(capture())
@@ -160,18 +164,22 @@ def test_legacy_cli_configuration_file_still_controls_host_and_port(
     assert tags == []
 
 
-
 def test_each_server_registers_existing_prompts_once(monkeypatch):
     from agent_connector_sdk.connector import build_server
+
     module = importlib.import_module("media_downloader.mcp_server")
     calls = []
     original = module.register_prompts
+
     def track(server):
         calls.append(server)
         return original(server)
+
     monkeypatch.setattr(module, "register_prompts", track)
     legacy = _server()
-    _, canonical = build_server(PACKAGE, command_args=["--transport", "stdio", "--auth-type", "none"])
+    _, canonical = build_server(
+        PACKAGE, command_args=["--transport", "stdio", "--auth-type", "none"]
+    )
     assert calls == [legacy, canonical]
 
 
