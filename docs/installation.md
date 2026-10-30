@@ -22,7 +22,7 @@ extra for the runtime the operator need:
 
 | Extra | Install | Pulls in |
 |---|---|---|
-| `mcp` | `pip install "media-downloader[mcp]"` | FastMCP MCP-server runtime (`agent-connector-sdk`) |
+| `mcp` | `pip install "media-downloader[mcp]"` | FastMCP MCP-server runtime (`scion-sdk`) |
 | `all` | `pip install "media-downloader[all]"` | The MCP server and the agent together |
 | `test` | `pip install "media-downloader[test]"` | `pytest`, `pytest-asyncio`, `pytest-cov`, `pytest-xdist` |
 

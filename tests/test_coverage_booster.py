@@ -5,7 +5,7 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
-from fastmcp import Context, FastMCP
+from fastmcp import Context
 
 # Import under an alias to avoid name conflict with the CLI function media_downloader
 import media_downloader as md_package
@@ -19,8 +19,6 @@ from media_downloader.media_downloader import (
 # =====================================================================
 # Global Auto-use Mocks for database-independent fast execution
 # =====================================================================
-
-
 
 
 @pytest.fixture(autouse=True)
@@ -155,7 +153,9 @@ def test_open_file():
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_standard(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -164,7 +164,9 @@ def test_download_video_standard(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_audio(_mock_exists, _mock_validate):
     # Tests the audio path which triggers FFmpegExtractAudio postprocessor branch
@@ -174,8 +176,12 @@ def test_download_video_audio(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get
+)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_rumble(_mock_exists, _mock_validate, mock_get):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -186,7 +192,9 @@ def test_download_video_rumble(_mock_exists, _mock_validate, mock_get):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 @patch("os.path.exists", return_value=True)
 def test_download_video_retry_fallback(_mock_exists, _mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
@@ -196,14 +204,18 @@ def test_download_video_retry_fallback(_mock_exists, _mock_validate):
 
 
 @patch("media_downloader.media_downloader.SafeYoutubeDL", MockYoutubeDL)
-@patch("media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url)
+@patch(
+    "media_downloader.media_downloader.validate_media_url", side_effect=lambda url: url
+)
 def test_download_video_permanent_failure(_mock_validate):
     downloader = MediaDownloader(download_directory="/tmp/downloads")
     result = downloader.download_video("https://youtube.com/fail_always")
     assert result is None
 
 
-@patch("media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get)
+@patch(
+    "media_downloader.media_downloader.safe_metadata_get", side_effect=mock_requests_get
+)
 def test_get_channel_videos_username(mock_get):
     downloader = MediaDownloader()
     downloader.get_channel_videos("test_user", limit=1)
@@ -498,20 +510,14 @@ def test_mcp_server_entrypoint(mock_get_instance):
 # =====================================================================
 
 
-
-
 # =====================================================================
 # Main execution (__main__.py) tests
 # =====================================================================
 
 
-
-
 # =====================================================================
 # Package-level init attributes and imports tests
 # =====================================================================
-
-
 
 
 # =====================================================================
@@ -526,10 +532,6 @@ def test_import_module_safely_error():
         assert res is None
 
 
-
-
-
-
 def test_requests_dependency_warning_import_error():
     # Patches sys.modules["requests.exceptions"] to trigger the except ImportError branch (lines 10-11) of mcp_server.py
 
@@ -537,10 +539,8 @@ def test_requests_dependency_warning_import_error():
         importlib.reload(sys.modules["media_downloader.mcp_server"])
 
 
-
-
 def test_mcp_server_main_block():
-    # Runs the main block of mcp_server.py (line 132) by stubbing out create_mcp_server in agent_connector_sdk
+    # Runs the main block of mcp_server.py (line 132) by stubbing out create_mcp_server in scion_sdk
     mock_mcp = MagicMock()
     mock_args = MagicMock()
     mock_args.transport = "stdio"
@@ -548,7 +548,7 @@ def test_mcp_server_main_block():
     with (
         patch("sys.argv", ["media_downloader"]),
         patch(
-            "agent_connector_sdk.mcp.server.create_mcp_server",
+            "scion_sdk.mcp.server.create_mcp_server",
             return_value=(mock_args, mock_mcp, []),
         ),
     ):
@@ -664,7 +664,9 @@ def test_default_skills_root_override_and_sdk_data_dir(monkeypatch, tmp_path):
 def test_get_channel_videos_returns_links(mock_get):
     """The MCP tool surface returns the method result, so it must return the links."""
     resp = MagicMock()
-    resp.content = b'<a href="/watch?v=aaa"> <a href="/watch?v=bbb"> <a href="/watch?v=ccc">'
+    resp.content = (
+        b'<a href="/watch?v=aaa"> <a href="/watch?v=bbb"> <a href="/watch?v=ccc">'
+    )
     mock_get.return_value = resp
 
     downloader = MediaDownloader()
@@ -690,4 +692,7 @@ def test_get_channel_videos_reads_embedded_video_ids(mock_get):
         "https://www.youtube.com/watch?v=yjHvkMeVzK0",
         "https://www.youtube.com/watch?v=71ya_JC_IbM",
     ]
-    assert mock_get.call_args_list[0].args[0] == "https://www.youtube.com/user/YouTube/videos"
+    assert (
+        mock_get.call_args_list[0].args[0]
+        == "https://www.youtube.com/user/YouTube/videos"
+    )

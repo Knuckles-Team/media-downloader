@@ -37,7 +37,9 @@ def test_redirect_target_is_revalidated_before_second_request():
     response.headers = {"location": "http://127.0.0.1/admin"}
 
     def resolve(host, *_args, **_kwargs):
-        return _addr("93.184.216.34") if host == "public.example" else _addr("127.0.0.1")
+        return (
+            _addr("93.184.216.34") if host == "public.example" else _addr("127.0.0.1")
+        )
 
     with (
         patch("socket.getaddrinfo", side_effect=resolve),

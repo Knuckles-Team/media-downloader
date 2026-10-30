@@ -6,28 +6,27 @@ encoder or reaches a real site.
 
 import json
 import subprocess
-
-import yaml
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 
-from media_downloader.security import MediaSecurityError
 from media_downloader.media_downloader import (
     MediaDownloader,
-    build_skill,
-    find_watch_skills,
-    skill_sources,
     build_frames,
+    build_skill,
     collect_captions,
     detect_scene_changes,
     extract_frames,
+    find_watch_skills,
     parse_vtt,
     probe_duration,
     select_timestamps,
+    skill_sources,
     write_transcript,
 )
+from media_downloader.security import MediaSecurityError
 
 ROLLUP_VTT = """WEBVTT
 Kind: captions
@@ -126,8 +125,7 @@ def test_collect_captions_marks_an_automatic_track(tmp_path):
 # --------------------------------------------------------------------------- #
 def _candidates(count):
     return [
-        {"timestamp_s": float(i), "scene_score": (i % 10) / 10.0}
-        for i in range(count)
+        {"timestamp_s": float(i), "scene_score": (i % 10) / 10.0} for i in range(count)
     ]
 
 
@@ -174,9 +172,7 @@ def test_select_timestamps_leaves_a_well_covered_video_alone():
 
 
 def test_select_timestamps_falls_back_to_even_spacing():
-    chosen, mode = select_timestamps(
-        _candidates(2), 60.0, max_frames=24, min_frames=6
-    )
+    chosen, mode = select_timestamps(_candidates(2), 60.0, max_frames=24, min_frames=6)
     assert mode == "interval"
     assert [c["timestamp_s"] for c in chosen] == [
         pytest.approx(v) for v in (8.571, 17.143, 25.714, 34.286, 42.857, 51.429)
@@ -247,13 +243,17 @@ def test_extract_frames_keeps_the_sharpest_candidate(tmp_path):
     # The middle candidate is the sharp one.
     sharpness = {10.1: 1.5, 10.45: 9.0, 10.8: 2.0}
 
-    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
+    with patch(
+        "media_downloader.media_downloader._capture_frame", _capture_stub(written)
+    ):
         with patch(
             "media_downloader.media_downloader.frame_sharpness",
             side_effect=lambda p: sharpness[written[-1]],
         ):
             items = extract_frames(
-                Path("/tmp/x.mp4"), [{"timestamp_s": 10.0, "scene_score": 0.9}], frames_dir
+                Path("/tmp/x.mp4"),
+                [{"timestamp_s": 10.0, "scene_score": 0.9}],
+                frames_dir,
             )
 
     assert written == [10.1, 10.45, 10.8], "all candidates after the cut are tried"
@@ -267,16 +267,18 @@ def test_extract_frames_keeps_the_sharpest_candidate(tmp_path):
     ]
     assert (frames_dir / "frame_0001_t00010.450.jpg").exists()
     # The losing candidates and the scratch file must not survive.
-    assert sorted(p.name for p in frames_dir.iterdir()) == [
-        "frame_0001_t00010.450.jpg"
-    ]
+    assert sorted(p.name for p in frames_dir.iterdir()) == ["frame_0001_t00010.450.jpg"]
 
 
 def test_extract_frames_straddles_the_mark_for_a_coverage_frame(tmp_path):
     """A coverage frame has no cut to avoid, so it searches both directions."""
     written: list[float] = []
-    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
-        with patch("media_downloader.media_downloader.frame_sharpness", return_value=5.0):
+    with patch(
+        "media_downloader.media_downloader._capture_frame", _capture_stub(written)
+    ):
+        with patch(
+            "media_downloader.media_downloader.frame_sharpness", return_value=5.0
+        ):
             extract_frames(
                 Path("/tmp/x.mp4"),
                 [{"timestamp_s": 100.0, "scene_score": None}],
@@ -287,8 +289,12 @@ def test_extract_frames_straddles_the_mark_for_a_coverage_frame(tmp_path):
 
 def test_extract_frames_never_seeks_before_zero(tmp_path):
     written: list[float] = []
-    with patch("media_downloader.media_downloader._capture_frame", _capture_stub(written)):
-        with patch("media_downloader.media_downloader.frame_sharpness", return_value=5.0):
+    with patch(
+        "media_downloader.media_downloader._capture_frame", _capture_stub(written)
+    ):
+        with patch(
+            "media_downloader.media_downloader.frame_sharpness", return_value=5.0
+        ):
             items = extract_frames(
                 Path("/tmp/x.mp4"),
                 [{"timestamp_s": 0.1, "scene_score": None}],
@@ -406,7 +412,9 @@ def test_watch_writes_a_manifest(_available, downloader, tmp_path):
 
 
 @patch("media_downloader.media_downloader.ffmpeg_available", return_value=False)
-def test_watch_downloads_into_the_bundle_then_restores(_available, downloader, tmp_path):
+def test_watch_downloads_into_the_bundle_then_restores(
+    _available, downloader, tmp_path
+):
     """Watching twice must not nest one bundle inside the last one."""
     state = _stub_download(downloader)
     first = downloader.watch("https://example.com/v")
@@ -635,7 +643,9 @@ def test_watch_keeps_captions_when_only_the_media_fails(downloader):
     assert manifest["video"]["id"] == "abc123", "metadata sidecar still read"
     assert manifest["media_file"] is None
     assert manifest["frames"]["status"] == "unavailable"
-    assert any("media itself could not be downloaded" in w for w in manifest["warnings"])
+    assert any(
+        "media itself could not be downloaded" in w for w in manifest["warnings"]
+    )
     # With no media file there is nothing for the transcriber to work on.
     assert "fallback" not in manifest["captions"]
 
@@ -738,8 +748,11 @@ def test_build_skill_records_what_evidence_was_actually_obtained(tmp_path):
 
 def test_build_skill_appends_a_second_video(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
-        manifest=_manifest()
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nfirst\n\n{REVISION}",
+        manifest=_manifest(),
     )
     result = build_skill(
         tmp_path,
@@ -754,13 +767,19 @@ def test_build_skill_appends_a_second_video(tmp_path):
 
     text = (Path(result["path"]) / "SKILL.md").read_text()
     assert "first" in text and "second" in text, "earlier content is kept"
-    assert text.count("## Sources") == 1, "the sources section is regenerated, not doubled"
+    assert text.count("## Sources") == 1, (
+        "the sources section is regenerated, not doubled"
+    )
     assert "https://example.com/v2" in text
 
 
 def test_build_skill_refuses_to_append_the_same_video_twice(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\n{REVISION}", manifest=_manifest()
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\n{REVISION}",
+        manifest=_manifest(),
     )
     result = build_skill(
         tmp_path, name="s", body="## Again\n", manifest=_manifest(), mode="append"
@@ -772,8 +791,11 @@ def test_build_skill_refuses_to_append_the_same_video_twice(tmp_path):
 
 def test_build_skill_replace_rewrites_the_body_and_keeps_sources(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nold\n\n{REVISION}",
-        manifest=_manifest()
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nold\n\n{REVISION}",
+        manifest=_manifest(),
     )
     build_skill(
         tmp_path,
@@ -800,7 +822,9 @@ def test_build_skill_replace_rewrites_the_body_and_keeps_sources(tmp_path):
 
 def test_build_skill_rejects_bad_input(tmp_path):
     with pytest.raises(ValueError, match="mode"):
-        build_skill(tmp_path, name="s", body=REVISION, manifest=_manifest(), mode="merge")
+        build_skill(
+            tmp_path, name="s", body=REVISION, manifest=_manifest(), mode="merge"
+        )
     with pytest.raises(ValueError, match="description"):
         build_skill(tmp_path, name="s", body=REVISION, manifest=_manifest())
     with pytest.raises(ValueError, match="no skill"):
@@ -812,7 +836,9 @@ def test_build_skill_rejects_bad_input(tmp_path):
             tmp_path, name="!!!", description="d", body=REVISION, manifest=_manifest()
         )
 
-    build_skill(tmp_path, name="s", description="d", body=REVISION, manifest=_manifest())
+    build_skill(
+        tmp_path, name="s", description="d", body=REVISION, manifest=_manifest()
+    )
     with pytest.raises(ValueError, match="already exists"):
         build_skill(
             tmp_path, name="s", description="d", body=REVISION, manifest=_manifest()
@@ -824,12 +850,18 @@ def test_find_watch_skills_reports_what_each_skill_already_covers(tmp_path):
     assert find_watch_skills(tmp_path / "absent") == []
 
     build_skill(
-        tmp_path, name="a", description="d", body=f"# A\n\n{REVISION}",
-        manifest=_manifest()
+        tmp_path,
+        name="a",
+        description="d",
+        body=f"# A\n\n{REVISION}",
+        manifest=_manifest(),
     )
     build_skill(
-        tmp_path, name="b", description="d", body=f"# B\n\n{REVISION}",
-        manifest=_manifest("v9")
+        tmp_path,
+        name="b",
+        description="d",
+        body=f"# B\n\n{REVISION}",
+        manifest=_manifest("v9"),
     )
     # A hand-written skill with no video provenance is not a watch skill.
     plain = tmp_path / "plain"
@@ -856,33 +888,50 @@ def test_build_skill_requires_a_revision_section(tmp_path):
     """A skill that cannot say what would change it cannot be checked later."""
     with pytest.raises(ValueError, match="What would change this skill"):
         build_skill(
-            tmp_path, name="s", description="d", body="# S\n\nbody\n",
+            tmp_path,
+            name="s",
+            description="d",
+            body="# S\n\nbody\n",
             manifest=_manifest(),
         )
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nbody\n\n{REVISION}",
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nbody\n\n{REVISION}",
         manifest=_manifest(),
     )
     with pytest.raises(ValueError, match="What would change this skill"):
         build_skill(
-            tmp_path, name="s", body="# S\n\nrewritten\n",
-            manifest=_manifest(), mode="replace",
+            tmp_path,
+            name="s",
+            body="# S\n\nrewritten\n",
+            manifest=_manifest(),
+            mode="replace",
         )
 
 
 def test_append_keeps_the_revision_section_last(tmp_path):
     """Appended sections must not bury the closing assessment."""
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nfirst\n\n{REVISION}",
         manifest=_manifest(),
     )
     result = build_skill(
-        tmp_path, name="s", body="## Update\n\nsecond\n",
-        manifest=_manifest("v2"), mode="append",
+        tmp_path,
+        name="s",
+        body="## Update\n\nsecond\n",
+        manifest=_manifest("v2"),
+        mode="append",
     )
     body = (Path(result["path"]) / "SKILL.md").read_text()
-    assert body.index("first") < body.index("second") < body.index(
-        "## What would change this skill"
+    assert (
+        body.index("first")
+        < body.index("second")
+        < body.index("## What would change this skill")
     )
     assert body.count("## What would change this skill") == 1
 
@@ -890,7 +939,10 @@ def test_append_keeps_the_revision_section_last(tmp_path):
 def test_append_lets_a_new_source_supersede_the_assessment(tmp_path):
     """A new source usually changes what is still missing."""
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nfirst\n\n{REVISION}",
         manifest=_manifest(),
     )
     result = build_skill(
@@ -908,13 +960,20 @@ def test_append_lets_a_new_source_supersede_the_assessment(tmp_path):
 
 def test_append_without_an_assessment_keeps_the_existing_one(tmp_path):
     build_skill(
-        tmp_path, name="s", description="d", body=f"# S\n\nfirst\n\n{REVISION}",
+        tmp_path,
+        name="s",
+        description="d",
+        body=f"# S\n\nfirst\n\n{REVISION}",
         manifest=_manifest(),
     )
     result = build_skill(
-        tmp_path, name="s", body="## Update\n\nsecond\n",
-        manifest=_manifest("v2"), mode="append",
+        tmp_path,
+        name="s",
+        body="## Update\n\nsecond\n",
+        manifest=_manifest("v2"),
+        mode="append",
     )
-    assert "A measurement of the real thing." in (
-        Path(result["path"]) / "SKILL.md"
-    ).read_text()
+    assert (
+        "A measurement of the real thing."
+        in (Path(result["path"]) / "SKILL.md").read_text()
+    )

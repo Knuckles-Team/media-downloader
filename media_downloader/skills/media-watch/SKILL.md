@@ -14,7 +14,7 @@ description: >-
 license: MIT
 tags: [media-downloader, watch, captions, key-frames, transcript, skill-builder, mcp]
 metadata:
-  author: Genius
+  author: Knuckles-Team
   version: '0.1.0'
 ---
 # Media Watch

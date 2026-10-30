@@ -3,7 +3,7 @@
 CONCEPT:AU-KG.ingest.list-durable-media. When a live epistemic-graph engine is
 reachable, a downloaded file is stored as a content-addressed **blob** with a
 ``MediaArtifact`` graph node (carrying its yt-dlp metadata) via the
-agent-connector-sdk knowledge-ingest facade. This makes the raw bytes - not
+scion-sdk knowledge-ingest facade. This makes the raw bytes - not
 just a filesystem path - durable, deduped, and queryable inside the
 knowledge graph.
 
@@ -23,7 +23,7 @@ import mimetypes
 import os
 from typing import Any
 
-from agent_connector_sdk.ingest import (
+from scion_sdk.ingest import (
     ChangeSet,
     IngestBinding,
     IngestError,

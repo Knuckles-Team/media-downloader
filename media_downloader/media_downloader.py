@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 import yaml
 import yt_dlp
-from agent_connector_sdk.connector_identity import connector_version
+from scion_sdk.connector_identity import connector_version
 
 from media_downloader.security import (
     MediaSecurityError,
@@ -767,11 +767,11 @@ def default_skills_root() -> Path:
     """Where video-built skills live by default.
 
     ``MEDIA_DOWNLOADER_SKILLS_DIR`` when set, else ``<connector data dir>/skills``
-    (``agent_connector_sdk.paths.data_dir``). The documented flat
+    (``scion_sdk.paths.data_dir``). The documented flat
     ``skills/<skill>/SKILL.md`` layout is what ``build_skill`` writes.
     """
-    from agent_connector_sdk.config import setting
-    from agent_connector_sdk.paths import data_dir
+    from scion_sdk.config import setting
+    from scion_sdk.paths import data_dir
 
     override = setting("MEDIA_DOWNLOADER_SKILLS_DIR", "")
     if override:

@@ -86,18 +86,18 @@ def test_sdk_floor_supports_content_identity_and_current_pack_protocol() -> None
     sdk = [Requirement(value) for value in declared if value.startswith("scion-sdk")]
     assert sdk
     for requirement in sdk:
-        assert requirement.specifier.contains("0.5.9")
-        assert not requirement.specifier.contains("0.5.5")
+        assert requirement.specifier.contains("0.6.2")
+        assert not requirement.specifier.contains("0.5.9")
 
 
 def test_production_pack_binds_packaged_ontology_and_shapes():
     import hashlib
     from importlib.metadata import version
 
-    from agent_connector_sdk.artifacts.pack import build_content_pack
-    from agent_connector_sdk.artifacts.resources import ResourceArtifactKind
-    from agent_connector_sdk.ports.session import TransportEndpoint
-    from agent_connector_sdk.transports.mcp import McpTransport
+    from scion_sdk.artifacts.pack import build_content_pack
+    from scion_sdk.artifacts.resources import ResourceArtifactKind
+    from scion_sdk.ports.session import TransportEndpoint
+    from scion_sdk.transports.mcp import McpTransport
 
     async def capture():
         async with McpTransport().session(
@@ -120,7 +120,7 @@ def test_production_pack_binds_packaged_ontology_and_shapes():
 
 
 def test_canonical_and_legacy_routes_preserve_the_full_tool_surface():
-    from agent_connector_sdk.connector import build_server
+    from scion_sdk.connector import build_server
 
     async def capture():
         _, canonical = build_server(
@@ -164,7 +164,7 @@ def test_legacy_cli_configuration_file_still_controls_host_and_port(
 
 
 def test_each_server_registers_existing_prompts_once(monkeypatch):
-    from agent_connector_sdk.connector import build_server
+    from scion_sdk.connector import build_server
 
     module = importlib.import_module("media_downloader.mcp_server")
     calls = []
@@ -183,7 +183,7 @@ def test_each_server_registers_existing_prompts_once(monkeypatch):
 
 
 def test_sdk_loader_preserves_explicit_source_mapping_and_resource_contracts():
-    from agent_connector_sdk.ingest.live_declaration import load_declaration
+    from scion_sdk.ingest.live_declaration import load_declaration
 
     from media_downloader import connector_sources as declared
 
