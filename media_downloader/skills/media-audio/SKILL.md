@@ -10,7 +10,7 @@ description: >-
 license: MIT
 tags: [media-downloader, audio, mp3, yt-dlp, kg-ingest, mcp]
 metadata:
-  author: Genius
+  author: Knuckles-Team
   version: '0.1.0'
 ---
 # Media Audio

@@ -10,7 +10,7 @@ license: MIT
 tags: [media-downloader, development, connector, test, gates]
 tier: repository
 metadata:
-  author: Genius
+  author: Knuckles-Team
   version: '0.2.0'
 ---
 

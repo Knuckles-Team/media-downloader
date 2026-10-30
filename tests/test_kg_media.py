@@ -15,7 +15,7 @@ import threading
 from types import SimpleNamespace
 
 import pytest
-from agent_connector_sdk.ingest import KnowledgeIngest
+from scion_sdk.ingest import KnowledgeIngest
 
 from media_downloader.kg_media import ingest_media_file
 

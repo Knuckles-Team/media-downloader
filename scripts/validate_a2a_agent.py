@@ -146,9 +146,7 @@ async def main():
     print("Validating the configured A2A agent...")
 
     questions = [
-        os.environ.get(
-            "A2A_VALIDATION_QUERY", "Describe your available capabilities."
-        )
+        os.environ.get("A2A_VALIDATION_QUERY", "Describe your available capabilities.")
     ]
 
     async with httpx.AsyncClient(timeout=10000.0) as client:

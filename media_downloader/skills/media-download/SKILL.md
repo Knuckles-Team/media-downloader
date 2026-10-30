@@ -11,7 +11,7 @@ description: >-
 license: MIT
 tags: [media-downloader, download, video, yt-dlp, kg-ingest, mcp]
 metadata:
-  author: Genius
+  author: Knuckles-Team
   version: '0.1.0'
 ---
 # Media Download

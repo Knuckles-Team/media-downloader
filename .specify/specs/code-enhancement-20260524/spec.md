@@ -15,7 +15,7 @@
 
 ## Functional Requirements
 
-- **FR-001**: Minor update: agent-connector-sdk 0.2.40 (installed) -> 0.16.0
+- **FR-001**: Minor update: scion-sdk 0.2.40 (installed) -> 0.16.0
 - **FR-002**: Minor update: pytest-xdist 3.6.0 (constraint — not installed) -> 3.8.0
 - **FR-003**: MAJOR update: yt-dlp 2025.12.08 (constraint — not installed) -> 2026.3.17
 - **FR-004**: Test suite lacks intent diversity (only one type)
@@ -41,7 +41,7 @@
 - **FR-024**: 3 tests have no assertions
 - **FR-025**: 11 tests use weak assertions (assert result is not None, assert True, etc.)
 - **FR-026**: Undocumented env vars: AUTH_TYPE, EUNOMIA_POLICY_FILE, EUNOMIA_TYPE, OTEL_EXPORTER_OTLP_ENDPOINT
-- **FR-027**: Analysis error: No module named 'agent_connector_sdk.knowledge_graph'
+- **FR-027**: Analysis error: No module named 'scion_sdk.knowledge_graph'
 
 ## Success Criteria
 

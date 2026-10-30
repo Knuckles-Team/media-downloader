@@ -25,13 +25,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from agent_connector_sdk.config import load_config
-from agent_connector_sdk.connector import build_server
-from agent_connector_sdk.connector_identity import connector_version
-from agent_connector_sdk.mcp.tool_surface import register_tool_surface
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.logging import get_logger
 from pydantic import Field
+from scion_sdk.config import load_config
+from scion_sdk.connector import build_server
+from scion_sdk.connector_identity import connector_version
+from scion_sdk.mcp.tool_surface import register_tool_surface
 
 from media_downloader.media_downloader import MediaDownloader
 

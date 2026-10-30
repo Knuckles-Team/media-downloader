@@ -83,8 +83,8 @@ def __dir__() -> list[str]:
     return sorted(list(globals().keys()) + __all__)
 
 
-from agent_connector_sdk.connector import Connector
-from agent_connector_sdk.connector_hooks import RegistrationContext
+from scion_sdk.connector import Connector
+from scion_sdk.connector_hooks import RegistrationContext
 
 
 def _register_legacy_surface(context: RegistrationContext) -> None:

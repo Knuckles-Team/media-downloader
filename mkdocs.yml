@@ -1,5 +1,5 @@
 site_name: "media-downloader"
-site_description: "CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the agent-connector-sdk ecosystem."
+site_description: "CLI / API + MCP Server + A2A Agent for downloading audio and video from the internet, built on yt-dlp and the scion-sdk ecosystem."
 site_url: "https://knuckles-team.github.io/media-downloader/"
 repo_name: "Knuckles-Team/media-downloader"
 repo_url: "https://github.com/Knuckles-Team/media-downloader"
