@@ -13,3 +13,4 @@ Read the existing specs first. Extend the spec that owns the behavior. Create a 
 ## Local specifications
 
 [`CONN-MEDIA-DOWNLOADER`](connector/spec.md) — The connector lists the video links of a YouTube channel.
+- [`CONN-MEDIA-DOWNLOADER-COMPETENCY-OPERATIONS`](competency-operations/spec.md) — Download history.
