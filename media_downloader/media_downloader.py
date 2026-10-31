@@ -824,7 +824,7 @@ def build_skill(
     manifest: dict,
     description: str | None = None,
     tags: list[str] | None = None,
-    author: str = "Genius",
+    author: str = "Repository Maintainers",
     mode: str = "create",
 ) -> dict:
     """Write a new video-built skill, or append another video's findings to one.
