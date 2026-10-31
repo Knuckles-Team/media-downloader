@@ -157,7 +157,7 @@ def test_select_timestamps_fills_a_long_blind_spot():
     assert mode == "scene+coverage"
     stamps = [c["timestamp_s"] for c in chosen]
     assert stamps == sorted(stamps)
-    gaps = [b - a for a, b in zip([0.0] + stamps, stamps + [1200.0])]
+    gaps = [b - a for a, b in zip([0.0] + stamps, stamps + [1200.0], strict=True)]
     assert max(gaps) <= 120.0, "no stretch of the video may go unsampled"
     assert any(c["scene_score"] is None for c in chosen), "coverage frames are marked"
 
