@@ -8,9 +8,10 @@ This repository owns the specs with the ID prefix `CONN-MEDIA-DOWNLOADER`. The c
 
 ## Add a spec
 
-Read the existing specs first. Extend the spec that owns the behavior. Create a spec only for a capability that no spec owns. Copy [`_template/`](_template/) to `specs/<area>/`, set the ID to `CONN-MEDIA-DOWNLOADER` or `CONN-MEDIA-DOWNLOADER-<AREA>`, and add one index line below.
+Read the existing specs first. Extend the spec that owns the behavior. Create a spec only for a capability that no spec owns. Copy the files of `.specify/templates/` to `specs/<area>/`, set the ID to `CONN-MEDIA-DOWNLOADER` or `CONN-MEDIA-DOWNLOADER-<AREA>`, and add one index line below.
 
 ## Local specifications
 
 [`CONN-MEDIA-DOWNLOADER`](connector/spec.md) — The connector lists the video links of a YouTube channel.
 - [`CONN-MEDIA-DOWNLOADER-COMPETENCY-OPERATIONS`](competency-operations/spec.md) — Download history.
+- [`CONN-MEDIA-DOWNLOADER-CONNECTOR-CONTENT`](connector-content/spec.md) — The connector serves its packaged content.
