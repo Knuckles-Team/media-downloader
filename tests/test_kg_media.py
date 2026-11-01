@@ -108,7 +108,7 @@ def test_ingest_media_file_name_falls_back_without_title(tmp_path, ingest):
 
 def test_ingest_media_file_noops_without_engine(tmp_path, monkeypatch):
     """No injected service + no configured engine -> clean no-op (never raises)."""
-    monkeypatch.delenv("EPISTEMIC_GRAPH_ENDPOINT", raising=False)
+    monkeypatch.delenv("MEDULLA_ENDPOINT", raising=False)
     f = tmp_path / "clip.mp4"
     f.write_bytes(b"x")
     assert ingest_media_file(str(f)) is None
