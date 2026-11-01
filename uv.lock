@@ -1011,7 +1011,7 @@ wheels = [
 
 [[package]]
 name = "media-downloader"
-version = "4.4.7"
+version = "4.4.8"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
