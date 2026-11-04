@@ -121,7 +121,7 @@ When query strings or parameters are supplied, an LLM-free **Knowledge Graph res
 
 > **Install the connector-focused `[mcp]` extra.** Examples use `media-downloader[mcp]` to add
 > FastMCP / FastAPI through `scion-sdk`; the required Scion SDK core
-> still carries `epistemic-graph[full]`. The `[agent-runtime]` extra additionally
+> still carries `medulla[full]`. The `[agent-runtime]` extra additionally
 > enables model orchestration.
 
 #### stdio Transport (local IDEs — Cursor, Claude Desktop, VS Code)
@@ -429,7 +429,7 @@ Pick the extra that matches what the operator want to run:
 
 | Extra | Installs | Use when |
 |-------|----------|----------|
-| `media-downloader[mcp]` | Connector-focused MCP server (`scion-sdk` — FastMCP/FastAPI + `epistemic-graph[full]`) | The operator only run the **MCP server** (smallest install / image) |
+| `media-downloader[mcp]` | Connector-focused MCP server (`scion-sdk` — FastMCP/FastAPI + `medulla[full]`) | The operator only run the **MCP server** (smallest install / image) |
 | `media-downloader[all]` | Everything (`mcp` + `agent` + `logfire`) | Development / both surfaces |
 
 ```bash
@@ -448,7 +448,7 @@ One multi-stage `docker/Dockerfile` builds the MCP-only image (`--target mcp`):
 
 | Image tag | Build target | Contents | Entrypoint |
 |-----------|--------------|----------|------------|
-| `knucklessg1/media-downloader:mcp` | `--target mcp` | `media-downloader[mcp]` — **connector-focused**, includes `epistemic-graph[full]`; no model-orchestration stack | `media-downloader-mcp` |
+| `knucklessg1/media-downloader:mcp` | `--target mcp` | `media-downloader[mcp]` — **connector-focused**, includes `medulla[full]`; no model-orchestration stack | `media-downloader-mcp` |
 
 ```bash
 docker build --target mcp   -t knucklessg1/media-downloader:mcp   docker/   # connector-focused MCP server
@@ -457,15 +457,15 @@ docker build --target mcp   -t knucklessg1/media-downloader:mcp   docker/   # co
 agent (default build) with a co-located `:mcp` sidecar. For an immutable production digest, tag and
 pin the operator's own build as shown in the hardened `docker run` pattern above.
 
-### Knowledge-graph database (`epistemic-graph`)
+### Knowledge-graph database (`medulla`)
 
-Scion SDK core dependency (`epistemic-graph[full]`). The `[mcp]` extra keeps
+Scion SDK core dependency (`medulla[full]`). The `[mcp]` extra keeps
 deployments can use the bundled engine. For production — or to share one knowledge graph
-across multiple agents — run **epistemic-graph as its own dedicated database service** and
+across multiple agents — run **medulla as its own dedicated database service** and
 configure the runtime to use it instead of the bundled engine. Deployment recipes
 (single-node + Raft HA), connection configuration, and the full database architecture
 (with diagrams) are documented in the
-[epistemic-graph deployment guide](https://knuckles-team.github.io/epistemic-graph/deployment/).
+[medulla deployment guide](https://knuckles-team.github.io/medulla/deployment/).
 
 ---
 

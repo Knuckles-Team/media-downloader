@@ -1,6 +1,6 @@
 # Media Download
 
-Download video (or audio) from YouTube, Rumble, and other yt-dlp-supported sites via the media-downloader MCP server, and natively store the downloaded media into the epistemic-graph knowledge graph as a content-addressed blob + :MediaAsset. Use when the agent must fetch a video by URL and optionally persist the raw bytes + metadata into the KG. Do NOT use for audio-only extraction to MP3 (media-audio) or for querying already-ingested media (query the KG :MediaAsset nodes directly).
+Download video (or audio) from YouTube, Rumble, and other yt-dlp-supported sites via the media-downloader MCP server, and natively store the downloaded media into the medulla knowledge graph as a content-addressed blob + :MediaAsset. Use when the agent must fetch a video by URL and optionally persist the raw bytes + metadata into the KG. Do NOT use for audio-only extraction to MP3 (media-audio) or for querying already-ingested media (query the KG :MediaAsset nodes directly).
 
 # Media Download
 
@@ -8,7 +8,7 @@ Download media by URL and (natively) durably store it in the knowledge graph.
 
 ## When to use
 - Download a video/media file by URL (YouTube, Rumble, and other yt-dlp sites).
-- Persist the raw bytes + yt-dlp metadata into epistemic-graph as a `:MediaAsset`
+- Persist the raw bytes + yt-dlp metadata into medulla as a `:MediaAsset`
   (happens automatically when a live engine is reachable).
 
 ## When NOT to use

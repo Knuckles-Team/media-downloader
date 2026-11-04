@@ -1,13 +1,13 @@
-"""Native epistemic-graph ingestion for downloaded media.
+"""Native medulla ingestion for downloaded media.
 
-CONCEPT:AU-KG.ingest.list-durable-media. When a live epistemic-graph engine is
+CONCEPT:AU-KG.ingest.list-durable-media. When a live medulla engine is
 reachable, a downloaded file is stored as a content-addressed **blob** with a
 ``MediaArtifact`` graph node (carrying its yt-dlp metadata) via the
 scion-sdk knowledge-ingest facade. This makes the raw bytes - not
 just a filesystem path - durable, deduped, and queryable inside the
 knowledge graph.
 
-Entirely best-effort: if no epistemic-graph endpoint is configured, or the
+Entirely best-effort: if no medulla endpoint is configured, or the
 configured engine is unreachable, every entry point here **no-ops** (returns
 ``None``), so the downloader keeps working with zero KG infrastructure. This
 is the native ingestion seam the ``media-downloader`` package contributes to
