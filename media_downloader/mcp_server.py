@@ -103,7 +103,7 @@ def register_server_surface(mcp: FastMCP) -> list[str]:
                 if ctx:
                     await ctx.info(f"Download complete: {relative_file}")
                 resp: dict[str, Any] = {"status": "success", "file": relative_file}
-                # Native epistemic-graph ingestion result (blob + :MediaAsset), when
+                # Native medulla ingestion result (blob + :MediaAsset), when
                 # a live engine was reachable; None otherwise. CONCEPT:AU-KG.ingest.list-durable-media
                 if downloader.last_kg_asset:
                     resp["kg_asset"] = downloader.last_kg_asset

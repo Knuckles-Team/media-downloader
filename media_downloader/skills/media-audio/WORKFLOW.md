@@ -1,6 +1,6 @@
 # Media Audio
 
-Extract audio as MP3 from a video/media URL via the media-downloader MCP server, natively storing the resulting audio into epistemic-graph as a content-addressed blob + :MediaAsset. Use when the agent needs the audio track (podcast, music, lecture) rather than the full video. Do NOT use for full-video download (media-download) or for transcription (use the audio-transcriber package).
+Extract audio as MP3 from a video/media URL via the media-downloader MCP server, natively storing the resulting audio into medulla as a content-addressed blob + :MediaAsset. Use when the agent needs the audio track (podcast, music, lecture) rather than the full video. Do NOT use for full-video download (media-download) or for transcription (use the audio-transcriber package).
 
 # Media Audio
 
@@ -8,7 +8,7 @@ Extract the audio track of a media URL to MP3 and durably store it in the KG.
 
 ## When to use
 - Pull just the audio (MP3) from a video/media URL.
-- Persist the audio bytes + metadata into epistemic-graph as a `:MediaAsset`.
+- Persist the audio bytes + metadata into medulla as a `:MediaAsset`.
 
 ## When NOT to use
 - Full-video download → `media-download`.

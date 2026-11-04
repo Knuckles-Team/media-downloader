@@ -1,4 +1,4 @@
-"""Native epistemic-graph media ingestion — Wire-First live-path coverage.
+"""Native medulla media ingestion — Wire-First live-path coverage.
 
 Exercises the real ``ingest_media_file`` seam with a fake ingest *transport*
 (no engine required) so the SDK's own request-building/validation contract

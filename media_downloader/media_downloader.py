@@ -964,7 +964,7 @@ class MediaDownloader:
         )
         self.download_directory = str(output_directory)
         self.audio = audio
-        # Native KG ingestion is on by default; it auto-no-ops when no epistemic-graph
+        # Native KG ingestion is on by default; it auto-no-ops when no medulla
         # engine is reachable, so it costs nothing without KG infrastructure.
         self.ingest_to_kg = ingest_to_kg
         self.last_kg_asset: dict | None = None
@@ -1045,7 +1045,7 @@ class MediaDownloader:
         """Natively store a freshly downloaded file into the knowledge graph.
 
         Default-on and best-effort: no-ops when ``ingest_to_kg`` is off or no live
-        epistemic-graph engine is reachable. Records the result on
+        medulla engine is reachable. Records the result on
         ``self.last_kg_asset`` (``{asset_id, digest, size_bytes, media_type}``).
         """
         if not self.ingest_to_kg or not path:
