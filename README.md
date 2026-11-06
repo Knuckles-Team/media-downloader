@@ -82,9 +82,6 @@ This server use dynamic Action-Routed tools to optimize token overhead and maxim
 | `media_downloader_download_all` | `MEDIA_DOWNLOADERTOOL` | Invoke the download_all operation. |
 | `media_downloader_download_video` | `MEDIA_DOWNLOADERTOOL` | Invoke the download_video operation. |
 | `media_downloader_get_channel_videos` | `MEDIA_DOWNLOADERTOOL` | Invoke the get_channel_videos operation. |
-| `media_downloader_open_file` | `MEDIA_DOWNLOADERTOOL` | Invoke the open_file operation. |
-| `media_downloader_progress_hook` | `MEDIA_DOWNLOADERTOOL` | Invoke the progress_hook operation. |
-| `media_downloader_set_progress_callback` | `MEDIA_DOWNLOADERTOOL` | Invoke the set_progress_callback operation. |
 | `media_downloader_watch` | `MEDIA_DOWNLOADERTOOL` | Download a video with its captions and extract scene-change key frames. |
 
 </details>

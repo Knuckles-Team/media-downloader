@@ -64,7 +64,7 @@ Queue URLs from a file, or list a channel:
 ```python
 downloader = MediaDownloader(download_directory="./Downloads")
 
-downloader.open_file("urls.txt")  # one URL per line, de-duplicated
+downloader._load_links_file("urls.txt")  # one URL per line, de-duplicated
 downloader.get_channel_videos("SomeChannel", limit=10)
 downloader.download_all()
 ```
@@ -76,7 +76,7 @@ def on_progress(progress, total=100):
     print(f"{progress:.0f}% of {total}")
 
 
-downloader.set_progress_callback(on_progress)
+downloader._set_progress_callback(on_progress)
 downloader.download_video("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 ```
 

@@ -133,7 +133,7 @@ def test_mediadownloader_init():
 def test_set_progress_callback():
     downloader = MediaDownloader()
     callback = MagicMock()
-    downloader.set_progress_callback(callback)
+    downloader._set_progress_callback(callback)
     assert downloader.progress_callback == callback
 
 
@@ -144,7 +144,7 @@ def test_open_file():
     )
 
     with patch("builtins.open", mock_open(read_data=file_content)):
-        downloader.open_file("mock_file.txt")
+        downloader._load_links_file("mock_file.txt")
 
     # Assert duplicates are removed and newlines stripped
     assert len(downloader.links) == 2
@@ -275,22 +275,22 @@ def test_get_channel_videos_not_found(mock_get):
 def test_progress_hook():
     downloader = MediaDownloader()
     callback = MagicMock()
-    downloader.set_progress_callback(callback)
+    downloader._set_progress_callback(callback)
 
     # 1. Test downloading with total bytes
-    downloader.progress_hook(
+    downloader._progress_hook(
         {"status": "downloading", "total_bytes": 1000, "downloaded_bytes": 450}
     )
     callback.assert_called_with(progress=45.0, total=100)
 
     # 2. Test downloading without total bytes
     callback.reset_mock()
-    downloader.progress_hook({"status": "downloading", "downloaded_bytes": 250})
+    downloader._progress_hook({"status": "downloading", "downloaded_bytes": 250})
     callback.assert_called_with(progress=250)
 
     # 3. Test finished status
     callback.reset_mock()
-    downloader.progress_hook({"status": "finished"})
+    downloader._progress_hook({"status": "finished"})
     callback.assert_called_with(progress=100, total=100)
 
 
@@ -345,7 +345,7 @@ def test_cli_media_downloader(mock_args, mock_downloader_class):
         assert mock_instance.audio is True
         mock_instance.get_channel_videos.assert_called_once_with("test_channel")
         mock_downloader_class.assert_called_with(download_directory="/tmp/test_dir")
-        mock_instance.open_file.assert_called_once_with("mock_file.txt")
+        mock_instance._load_links_file.assert_called_once_with("mock_file.txt")
         mock_instance.links.extend.assert_called()
         mock_instance.download_all.assert_called_once()
         mock_exit.assert_not_called()
