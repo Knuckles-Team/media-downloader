@@ -971,10 +971,10 @@ class MediaDownloader:
         self.logger = logging.getLogger("MediaDownloader")
         self.progress_callback = None
 
-    def set_progress_callback(self, callback):
+    def _set_progress_callback(self, callback):
         self.progress_callback = callback
 
-    def open_file(self, file):
+    def _load_links_file(self, file):
         youtube_urls = open(file)
         for url in youtube_urls:
             self.links.append(url)
@@ -1002,7 +1002,7 @@ class MediaDownloader:
             "outtmpl": outtmpl,
             "quiet": True,
             "no_warnings": True,
-            "progress_hooks": [self.progress_hook],
+            "progress_hooks": [self._progress_hook],
             "logger": YtDlpLogger(self.logger),
             "restrictfilenames": True,
             "windowsfilenames": True,
@@ -1126,7 +1126,7 @@ class MediaDownloader:
         self.logger.error("Could not find the requested channel")
         return []
 
-    def progress_hook(self, d):
+    def _progress_hook(self, d):
         if self.progress_callback and d["status"] == "downloading":
             if d.get("total_bytes") and d.get("downloaded_bytes"):
                 progress = (d["downloaded_bytes"] / d["total_bytes"]) * 100
@@ -1310,7 +1310,7 @@ def media_downloader():
     if args.channel:
         video_downloader_instance.get_channel_videos(args.channel)
     if args.file:
-        video_downloader_instance.open_file(args.file)
+        video_downloader_instance._load_links_file(args.file)
     if args.links:
         url_list = args.links.replace(" ", "").split(",")
         video_downloader_instance.links.extend(url_list)
