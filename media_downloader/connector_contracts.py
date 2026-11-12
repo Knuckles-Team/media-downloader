@@ -20,23 +20,27 @@ CONTRACTS = (
                     "download_directory",
                     "video_url",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
             ToolStep(
                 "media_downloader_download_all",
                 params=(),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
             ToolStep(
@@ -45,12 +49,14 @@ CONTRACTS = (
                     "extra_opts",
                     "link",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
         ),
@@ -64,11 +70,11 @@ CONTRACTS = (
                     "channel",
                     "limit",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
                     Refusal("NOT_FOUND", "the requested record does not exist"),
                 ),
             ),
@@ -79,14 +85,12 @@ CONTRACTS = (
         (
             ToolStep(
                 "list_watch_skills",
-                params=(
-                    "skills_root",
-                ),
-                result=(
-                    "result",
-                ),
+                params=("skills_root",),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
                     Refusal("NOT_FOUND", "the requested record does not exist"),
                 ),
             ),
@@ -101,12 +105,14 @@ CONTRACTS = (
                     "skills_root",
                     "tags",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
         ),
@@ -123,12 +129,14 @@ CONTRACTS = (
                     "scene_threshold",
                     "subtitle_langs",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
             ToolStep(
@@ -140,12 +148,14 @@ CONTRACTS = (
                     "subtitle_languages",
                     "video_url",
                 ),
-                result=(
-                    "result",
-                ),
+                result=("result",),
                 refusals=(
-                    Refusal("ACCESS_DENIED", "the credential lacks access to the operation"),
-                    Refusal("INVALID_ARGUMENT", "the upstream system rejects the input"),
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
                 ),
             ),
         ),
@@ -164,22 +174,16 @@ LINKS = (
             "media-downloader-media-archivist",
             "media-downloader-operator",
         ),
-        skills=(
-            "media-downloader-link-queue",
-        ),
+        skills=("media-downloader-link-queue",),
     ),
     SurfaceLink(
         "media-downloader-inspect-channel",
-        tools=(
-            "media_downloader_get_channel_videos",
-        ),
+        tools=("media_downloader_get_channel_videos",),
         prompts=(
             "media-downloader-media-archivist",
             "media-downloader-operator",
         ),
-        skills=(
-            "media-downloader-link-queue",
-        ),
+        skills=("media-downloader-link-queue",),
     ),
     SurfaceLink(
         "media-downloader-manage-watch-skill",
@@ -191,9 +195,7 @@ LINKS = (
             "media-downloader-operator",
             "media-downloader-video-analyst",
         ),
-        skills=(
-            "media-downloader-video-watch",
-        ),
+        skills=("media-downloader-video-watch",),
     ),
     SurfaceLink(
         "media-downloader-manage-watch",
@@ -205,33 +207,19 @@ LINKS = (
             "media-downloader-operator",
             "media-downloader-video-analyst",
         ),
-        skills=(
-            "media-downloader-video-watch",
-        ),
+        skills=("media-downloader-video-watch",),
     ),
     SurfaceLink(
         "media-audio",
-        tools=(
-            "download_media",
-        ),
-        prompts=(
-            "media-downloader-operator",
-        ),
-        skills=(
-            "media-audio",
-        ),
+        tools=("download_media",),
+        prompts=("media-downloader-operator",),
+        skills=("media-audio",),
     ),
     SurfaceLink(
         "media-download",
-        tools=(
-            "download_media",
-        ),
-        prompts=(
-            "media-downloader-operator",
-        ),
-        skills=(
-            "media-download",
-        ),
+        tools=("download_media",),
+        prompts=("media-downloader-operator",),
+        skills=("media-download",),
     ),
     SurfaceLink(
         "media-downloader-operations",
@@ -239,12 +227,8 @@ LINKS = (
             "list_watch_skills",
             "media_downloader_get_channel_videos",
         ),
-        prompts=(
-            "media-downloader-operator",
-        ),
-        skills=(
-            "media-downloader-operations",
-        ),
+        prompts=("media-downloader-operator",),
+        skills=("media-downloader-operations",),
     ),
     SurfaceLink(
         "media-watch",
@@ -253,29 +237,21 @@ LINKS = (
             "list_watch_skills",
             "watch_media",
         ),
-        prompts=(
-            "media-downloader-operator",
-        ),
-        skills=(
-            "media-watch",
-        ),
+        prompts=("media-downloader-operator",),
+        skills=("media-watch",),
     ),
 )
 
 LOCATIONS = (
     DataLocation(
         "media-channel-videos",
-        (
-            "MediaOccurrence",
-        ),
+        ("MediaOccurrence",),
         "MEDIA_DOWNLOADER_OUTPUT_ROOT",
         "media_downloader_get_channel_videos",
     ),
     DataLocation(
         "media-watch-skills",
-        (
-            "MediaArtifact",
-        ),
+        ("MediaArtifact",),
         "MEDIA_DOWNLOADER_SKILLS_DIR",
         "list_watch_skills",
     ),
