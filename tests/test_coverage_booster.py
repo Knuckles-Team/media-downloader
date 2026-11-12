@@ -369,24 +369,12 @@ def test_cli_media_downloader(mock_args, mock_downloader_class):
 
 
 @pytest.mark.asyncio
-async def test_mcp_server_prompts():
+async def test_mcp_server_serves_agent_prompts_only():
     mcp, _, _, _ = get_mcp_instance()
-
-    prompt_video = await mcp.render_prompt(
-        "download_video", {"video_url": "http://myvideo"}
-    )
-    assert (
-        prompt_video.messages[0].content.text
-        == "Download the following video: http://myvideo."
-    )
-
-    prompt_audio = await mcp.render_prompt(
-        "download_audio", {"audio_url": "http://myaudio"}
-    )
-    assert (
-        prompt_audio.messages[0].content.text
-        == "Download the following media as audio only: http://myaudio."
-    )
+    names = {p.name for p in await mcp.list_prompts()}
+    assert "media-downloader-operator" in names
+    assert "download_video" not in names
+    assert "download_audio" not in names
 
 
 @pytest.mark.asyncio
