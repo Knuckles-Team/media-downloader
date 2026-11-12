@@ -8,9 +8,26 @@ from __future__ import annotations
 
 from typing import Any
 
+from scion_sdk.ingest.live_declaration import source_meta
+
 CONNECTOR: str = "media-downloader-mcp"
 
-SOURCES: tuple[Any, ...] = ()
+SOURCES: tuple[Any, ...] = (
+    source_meta(
+        tool="list_watch_skills",
+        source_id="media-watch-skills",
+        record_type="MediaArtifact",
+        id_field="name",
+        pagination="none",
+        preset={
+            "doc_type": "video-skill",
+            "params_style": "args",
+        },
+        records_path="skills",
+        server="media-downloader-mcp",
+        title_field="name",
+    ),
+)
 
 SCHEMA_MAPPINGS: dict[str, Any] = {
     "MediaArtifact": {

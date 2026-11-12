@@ -1,0 +1,275 @@
+"""Surface contracts: tool use, links, data locations and business roles."""
+
+from scion_sdk.surface_contracts import (
+    BusinessRole,
+    DataLocation,
+    Refusal,
+    SurfaceLink,
+    ToolStep,
+    ToolUseContract,
+)
+
+CONTRACTS = (
+    ToolUseContract(
+        "media-downloader-manage-link-download",
+        (
+            ToolStep(
+                "download_media",
+                params=(
+                    "audio_only",
+                    "download_directory",
+                    "video_url",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+            ToolStep(
+                "media_downloader_download_all",
+                params=(),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+            ToolStep(
+                "media_downloader_download_video",
+                params=(
+                    "extra_opts",
+                    "link",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+        ),
+    ),
+    ToolUseContract(
+        "media-downloader-inspect-channel",
+        (
+            ToolStep(
+                "media_downloader_get_channel_videos",
+                params=(
+                    "channel",
+                    "limit",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal("NOT_FOUND", "the requested record does not exist"),
+                ),
+            ),
+        ),
+    ),
+    ToolUseContract(
+        "media-downloader-manage-watch-skill",
+        (
+            ToolStep(
+                "list_watch_skills",
+                params=("skills_root",),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal("NOT_FOUND", "the requested record does not exist"),
+                ),
+            ),
+            ToolStep(
+                "build_watch_skill",
+                params=(
+                    "body",
+                    "description",
+                    "manifest_path",
+                    "mode",
+                    "name",
+                    "skills_root",
+                    "tags",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+        ),
+    ),
+    ToolUseContract(
+        "media-downloader-manage-watch",
+        (
+            ToolStep(
+                "media_downloader_watch",
+                params=(
+                    "link",
+                    "max_frames",
+                    "min_frames",
+                    "scene_threshold",
+                    "subtitle_langs",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+            ToolStep(
+                "watch_media",
+                params=(
+                    "download_directory",
+                    "max_frames",
+                    "scene_threshold",
+                    "subtitle_languages",
+                    "video_url",
+                ),
+                result=("result",),
+                refusals=(
+                    Refusal(
+                        "ACCESS_DENIED", "the credential lacks access to the operation"
+                    ),
+                    Refusal(
+                        "INVALID_ARGUMENT", "the upstream system rejects the input"
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
+
+LINKS = (
+    SurfaceLink(
+        "media-downloader-manage-link-download",
+        tools=(
+            "download_media",
+            "media_downloader_download_all",
+            "media_downloader_download_video",
+        ),
+        prompts=(
+            "media-downloader-media-archivist",
+            "media-downloader-operator",
+        ),
+        skills=("media-downloader-link-queue",),
+    ),
+    SurfaceLink(
+        "media-downloader-inspect-channel",
+        tools=("media_downloader_get_channel_videos",),
+        prompts=(
+            "media-downloader-media-archivist",
+            "media-downloader-operator",
+        ),
+        skills=("media-downloader-link-queue",),
+    ),
+    SurfaceLink(
+        "media-downloader-manage-watch-skill",
+        tools=(
+            "build_watch_skill",
+            "list_watch_skills",
+        ),
+        prompts=(
+            "media-downloader-operator",
+            "media-downloader-video-analyst",
+        ),
+        skills=("media-downloader-video-watch",),
+    ),
+    SurfaceLink(
+        "media-downloader-manage-watch",
+        tools=(
+            "media_downloader_watch",
+            "watch_media",
+        ),
+        prompts=(
+            "media-downloader-operator",
+            "media-downloader-video-analyst",
+        ),
+        skills=("media-downloader-video-watch",),
+    ),
+    SurfaceLink(
+        "media-audio",
+        tools=("download_media",),
+        prompts=("media-downloader-operator",),
+        skills=("media-audio",),
+    ),
+    SurfaceLink(
+        "media-download",
+        tools=("download_media",),
+        prompts=("media-downloader-operator",),
+        skills=("media-download",),
+    ),
+    SurfaceLink(
+        "media-downloader-operations",
+        tools=(
+            "list_watch_skills",
+            "media_downloader_get_channel_videos",
+        ),
+        prompts=("media-downloader-operator",),
+        skills=("media-downloader-operations",),
+    ),
+    SurfaceLink(
+        "media-watch",
+        tools=(
+            "build_watch_skill",
+            "list_watch_skills",
+            "watch_media",
+        ),
+        prompts=("media-downloader-operator",),
+        skills=("media-watch",),
+    ),
+)
+
+LOCATIONS = (
+    DataLocation(
+        "media-channel-videos",
+        ("MediaOccurrence",),
+        "MEDIA_DOWNLOADER_OUTPUT_ROOT",
+        "media_downloader_get_channel_videos",
+    ),
+    DataLocation(
+        "media-watch-skills",
+        ("MediaArtifact",),
+        "MEDIA_DOWNLOADER_SKILLS_DIR",
+        "list_watch_skills",
+    ),
+)
+
+ROLES = (
+    BusinessRole(
+        "media archivist",
+        tasks=(
+            "media-downloader-inspect-channel",
+            "media-downloader-manage-link-download",
+        ),
+    ),
+    BusinessRole(
+        "video analyst",
+        tasks=(
+            "media-downloader-manage-watch",
+            "media-downloader-manage-watch-skill",
+        ),
+    ),
+)

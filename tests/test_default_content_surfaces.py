@@ -41,6 +41,8 @@ async def _listings():
         resources = {str(r.uri) for r in await client.list_resources()}
         prompts = {p.name for p in await client.list_prompts()}
         for uri in resources:
+            if uri.endswith("/contracts.ttl"):
+                continue  # rendered by the SDK from connector_contracts.py
             if uri.startswith(("ontology://", "shapes://")):
                 directory = ROOT / "ontology"
                 if uri.startswith("shapes://"):
@@ -91,8 +93,8 @@ def test_sdk_floor_supports_content_identity_and_current_pack_protocol() -> None
         floor = max(
             Version(s.version) for s in requirement.specifier if s.operator == ">="
         )
-        assert floor >= Version("0.7.0")
-        assert requirement.specifier.contains("0.7.0")
+        assert floor >= Version("0.9.0")
+        assert requirement.specifier.contains("0.9.0")
         assert not requirement.specifier.contains("0.5.9")
 
 
@@ -169,25 +171,6 @@ def test_legacy_cli_configuration_file_still_controls_host_and_port(
     assert tags == []
 
 
-def test_each_server_registers_existing_prompts_once(monkeypatch):
-    from scion_sdk.connector import build_server
-
-    module = importlib.import_module("media_downloader.mcp_server")
-    calls = []
-    original = module.register_prompts
-
-    def track(server):
-        calls.append(server)
-        return original(server)
-
-    monkeypatch.setattr(module, "register_prompts", track)
-    legacy = _server()
-    _, canonical = build_server(
-        PACKAGE, command_args=["--transport", "stdio", "--auth-type", "none"]
-    )
-    assert calls == [legacy, canonical]
-
-
 def test_sdk_loader_preserves_explicit_source_mapping_and_resource_contracts():
     from scion_sdk.ingest.live_declaration import load_declaration
 
@@ -199,7 +182,7 @@ def test_sdk_loader_preserves_explicit_source_mapping_and_resource_contracts():
         len(actual.sources),
         len(actual.schema_mappings),
         len(actual.resources),
-    ) == (0, 3, 3)
+    ) == (1, 3, 3)
     sources = {item.source_id: item for item in actual.sources}
     for item in declared.SOURCES:
         for entry in item["connector_sources"]:

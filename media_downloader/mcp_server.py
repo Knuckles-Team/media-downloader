@@ -46,18 +46,6 @@ def get_client() -> MediaDownloader:
     return MediaDownloader(links=[])
 
 
-def register_prompts(mcp: FastMCP):
-    @mcp.prompt
-    def download_video(video_url: str) -> str:
-        """Generates a prompt for downloading a video."""
-        return f"Download the following video: {video_url}."
-
-    @mcp.prompt
-    def download_audio(audio_url: str) -> str:
-        """Generates a prompt for downloading audio."""
-        return f"Download the following media as audio only: {audio_url}."
-
-
 def get_mcp_instance(*, command_args=None) -> tuple[Any, Any, Any, list[str]]:
     """Initialize and return the MCP instance, args, and middlewares."""
     load_config()
@@ -67,7 +55,7 @@ def get_mcp_instance(*, command_args=None) -> tuple[Any, Any, Any, list[str]]:
 
 
 def register_server_surface(mcp: FastMCP) -> list[str]:
-    """Register existing media tools and prompts without changing their bodies."""
+    """Register existing media tools without changing their bodies."""
 
     @mcp.tool(name="download_media")
     async def download_media(
@@ -253,7 +241,10 @@ def register_server_surface(mcp: FastMCP) -> list[str]:
 
     @mcp.tool(name="list_watch_skills")
     async def list_watch_skills(
-        skills_root: str = Field(description="Directory holding video-built skills"),
+        skills_root: str = Field(
+            default="",
+            description="Directory holding video-built skills; empty uses the shared skills directory",
+        ),
         ctx: Context | None = Field(
             default=None, description="MCP context for progress reporting"
         ),
@@ -268,7 +259,7 @@ def register_server_surface(mcp: FastMCP) -> list[str]:
         try:
             from media_downloader.media_downloader import find_watch_skills
 
-            skills = find_watch_skills(skills_root)
+            skills = find_watch_skills(skills_root or None)
             return {"status": "success", "count": len(skills), "skills": skills}
         except Exception as e:
             logger.error("Skill listing error (%s)", type(e).__name__)
@@ -281,8 +272,6 @@ def register_server_surface(mcp: FastMCP) -> list[str]:
         service="media-downloader",
         tools_module=sys.modules[__name__],
     )
-
-    register_prompts(mcp)
 
     return registered_tags
 

@@ -369,31 +369,19 @@ def test_cli_media_downloader(mock_args, mock_downloader_class):
 
 
 @pytest.mark.asyncio
-async def test_mcp_server_prompts():
-    mcp, _, _, _ = get_mcp_instance()
-
-    prompt_video = await mcp.render_prompt(
-        "download_video", {"video_url": "http://myvideo"}
-    )
-    assert (
-        prompt_video.messages[0].content.text
-        == "Download the following video: http://myvideo."
-    )
-
-    prompt_audio = await mcp.render_prompt(
-        "download_audio", {"audio_url": "http://myaudio"}
-    )
-    assert (
-        prompt_audio.messages[0].content.text
-        == "Download the following media as audio only: http://myaudio."
-    )
+async def test_mcp_server_serves_agent_prompts_only():
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
+    names = {p.name for p in await mcp.list_prompts()}
+    assert "media-downloader-operator" in names
+    assert "download_video" not in names
+    assert "download_audio" not in names
 
 
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 @patch("os.path.exists", return_value=True)
 async def test_mcp_tool_download_media_success(_mock_exists, mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     download_media_tool = await mcp.get_tool("download_media")
     download_media_func = download_media_tool.fn
 
@@ -424,7 +412,7 @@ async def test_mcp_tool_download_media_success(_mock_exists, mock_downloader_cla
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 async def test_mcp_tool_download_media_failure(mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     download_media_tool = await mcp.get_tool("download_media")
     download_media_func = download_media_tool.fn
 
@@ -448,7 +436,7 @@ async def test_mcp_tool_download_media_failure(mock_downloader_class):
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 async def test_mcp_tool_download_media_exception(mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     download_media_tool = await mcp.get_tool("download_media")
     download_media_func = download_media_tool.fn
 
@@ -568,7 +556,7 @@ def test_media_downloader_main_block():
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 async def test_mcp_tool_watch_media_success(mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     watch_tool = await mcp.get_tool("watch_media")
 
     mock_instance = MagicMock()
@@ -600,7 +588,7 @@ async def test_mcp_tool_watch_media_success(mock_downloader_class):
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 async def test_mcp_tool_watch_media_clamps_frame_count(mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     watch_tool = await mcp.get_tool("watch_media")
 
     mock_instance = MagicMock()
@@ -627,7 +615,7 @@ async def test_mcp_tool_watch_media_clamps_frame_count(mock_downloader_class):
 @pytest.mark.asyncio
 @patch("media_downloader.media_downloader.MediaDownloader")
 async def test_mcp_tool_watch_media_hides_exception_detail(mock_downloader_class):
-    mcp, _, _, _ = get_mcp_instance()
+    mcp, _, _, _ = get_mcp_instance(command_args=[])
     watch_tool = await mcp.get_tool("watch_media")
 
     mock_instance = MagicMock()
