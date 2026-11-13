@@ -1,4 +1,4 @@
-@prefix : <http://knuckles.team/kg#> .
+@prefix : <https://knuckles-team.github.io/ontology/connector/media-downloader#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -25,10 +25,10 @@
     rdfs:domain :MediaRendition ;
     rdfs:range :MediaArtifact .
 
-<http://knuckles.team/kg/media-downloader> a owl:Ontology ;
+<https://knuckles-team.github.io/ontology/connector/media-downloader> a owl:Ontology ;
     rdfs:label "Media downloader artifact and occurrence ontology" ;
     rdfs:comment "Content-addressed media identity separated from privacy-scoped source occurrences and derived renditions." .
 
-<http://knuckles.team/kg#MediaArtifact> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
-<http://knuckles.team/kg#MediaRendition> rdfs:subClassOf <http://knuckles.team/kg#Artifact> .
-<http://knuckles.team/kg#MediaOccurrence> rdfs:subClassOf <http://knuckles.team/kg#Event> .
+<https://knuckles-team.github.io/ontology/connector/media-downloader#MediaArtifact> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Artifact> .
+<https://knuckles-team.github.io/ontology/connector/media-downloader#MediaRendition> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Artifact> .
+<https://knuckles-team.github.io/ontology/connector/media-downloader#MediaOccurrence> rdfs:subClassOf <https://knuckles-team.github.io/ontology/core#Event> .
