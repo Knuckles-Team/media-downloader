@@ -20,10 +20,8 @@
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/media-downloader)
 ![PyPI - Implementation](https://img.shields.io/pypi/implementation/media-downloader)
 
-*Version: 4.4.5*
-
-> **Documentation** — Installation, deployment, and usage across the CLI, Python API,
-> MCP, and A2A agent interfaces are maintained in the
+> **Documentation** — Installation, deployment, and usage across the API, CLI, MCP,
+> and A2A agent interfaces are maintained in the
 > [official documentation](https://knuckles-team.github.io/media-downloader/).
 
 ---
@@ -233,6 +231,8 @@ the detailed transport contract.
   ingress. Keep its URL, outbound identity references, trust profile, and exact
   `MCP_ALLOWED_HOSTS` in `AgentConfig`.
 <!-- END GENERATED: additional-deployment-options -->
+
+---
 
 ## Agent
 
@@ -500,8 +500,6 @@ Contributions are welcome! Please ensure code quality by running local checks be
 - Lint code using `ruff check .`
 - Validate type-safety with `mypy .`
 - Ran test suites using `pytest`
-
-
 
 <!-- GOVERNED-CAPABILITY:START -->
 ## Governed capability contract
