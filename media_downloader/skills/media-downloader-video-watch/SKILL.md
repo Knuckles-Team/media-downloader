@@ -15,6 +15,21 @@ metadata:
 
 Use the typed tools of the `media-downloader` connector: one tool per upstream API operation, named `<operation>`. Each tool takes typed parameters; there is no `action` or `params_json` routing.
 
+## Steps
+
+1. List the existing watch skills with `list_watch_skills`, and verify the video is not already covered.
+2. Watch the video with `watch_media` using `video_url`, `max_frames` and `scene_threshold`, and verify the response lists captions and frames.
+3. Read the frames and transcript the `watch_media` bundle points to, and verify each frame filename carries its timestamp.
+4. Write the skill with `build_watch_skill` using `name`, `description`, `body` and `mode`, and verify the skill appears in a new `list_watch_skills` call.
+
+## Failure recovery
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| The response reports frames as unavailable | `ffmpeg` or `ffprobe` is missing from `PATH` | Install both on the server host and call `watch_media` again |
+| No captions are returned | The video has no captions in the requested languages | Set `subtitle_languages` to the available codes or transcribe with `transcribe_audio` |
+| `build_watch_skill` refuses to overwrite | The skill exists and `mode` does not allow replacing | Use `mode` append to extend it or choose a new `name` |
+
 ## Where the data lives
 
 - **media-channel-videos** (`MEDIA_DOWNLOADER_OUTPUT_ROOT`): holds MediaOccurrence; read with `media_downloader_get_channel_videos`.
