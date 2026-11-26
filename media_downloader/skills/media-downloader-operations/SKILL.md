@@ -19,6 +19,22 @@ Use the provider's governed MCP tools through Arbora delegation.
 5. Ingest source data only through the signed connector preset and ChangeEnvelope path.
 6. Verify the durable result and its trace/evidence before reporting completion.
 
+## Steps
+
+1. Establish the verified GraphSession and tenant, and verify both are present before the first `find` call.
+2. Discover the current tool surface with `find` and verify the exact action schema before building arguments.
+3. Run read-only inspection first, such as `list_watch_skills`, and verify the result describes the intended items.
+4. For a change, present the impact and use the provider dry-run or the `act` preview when offered, and verify the preview matches the request.
+5. Execute the mutation as a fenced WorkItem with `act`, and verify the returned trace or evidence reference shows the durable result.
+
+## Failure recovery
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| A tool name or parameter is rejected | The cached tool surface is stale | Run `find` for the intent again and use the returned schema |
+| A mutation is denied by policy | An approval or ACL gate is closed | Report the denial and stop, because a policy denial is final |
+| A download is refused for a host | The URL points at a private host | Use a public URL, because private hosts are allowed only through the administrator's exact-host list |
+
 ## Safety contract
 
 - Never persist credentials, endpoints, raw personal identifiers, hostnames, or local paths.

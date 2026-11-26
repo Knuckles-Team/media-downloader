@@ -2,15 +2,7 @@
 name: media-watch
 skill_type: skill
 description: >-
-  Watch a video by URL through the media-downloader MCP server and turn it into a
-  reusable skill: pull the captions, extract scene-change key frames whose
-  filenames carry their timestamp, then read both and write down what the video
-  teaches, the steps, and the warnings. Works on tutorials, demos, talks, Loom and
-  TikTok clips, podcasts, and screen recordings of something broken. Use when the
-  agent must understand or reproduce what a video shows rather than merely archive
-  it. Do NOT use for plain video download (media-download), audio-only MP3
-  extraction (media-audio), or transcribing a file that is already on disk
-  (audio-transcriber-transcription).
+  Watch a video by URL through the media-downloader MCP server and turn it into a reusable skill: pull the captions, extract scene-change key frames whose filenames carry their timestamp, then read both and write down what the video teaches, the steps, and the warnings. Use when the agent must understand or reproduce what a video shows rather than merely archive it.
 license: MIT
 tags: [media-downloader, watch, captions, key-frames, transcript, skill-builder, mcp]
 metadata:
@@ -18,6 +10,8 @@ metadata:
   version: '0.1.0'
 ---
 # Media Watch
+
+Scope: Watch a video by URL through the media-downloader MCP server and turn it into a reusable skill: pull the captions, extract scene-change key frames whose filenames carry their timestamp, then read both and write down what the video teaches, the steps, and the warnings. Works on tutorials, demos, talks, Loom and TikTok clips, podcasts, and screen recordings of something broken. Use when the agent must understand or reproduce what a video shows rather than merely archive it. Do NOT use for plain video download (media-download), audio-only MP3 extraction (media-audio), or transcribing a file that is already on disk (audio-transcriber-transcription).
 
 Turn a video into something an agent can work from: the transcript plus what was
 actually on screen.
@@ -45,6 +39,22 @@ still returns captions and reports `frames.status: "unavailable"`.
 | `GRAPH_SERVICE_ENDPOINTS` | optional | Engine endpoint for native KG ingestion |
 
 `MCP_TOOL_MODE` (`condensed`|`verbose`|`both`) selects the tool surface.
+
+## Steps
+
+1. List what exists with `list_watch_skills` and verify whether a skill already covers the video.
+2. Fetch the bundle with `watch_media` using `video_url`, `max_frames` and `scene_threshold`, and verify `manifest.json` lists a transcript and frames.
+3. Read `transcript.txt` and the frames under `frames/`, and verify each frame filename carries its timestamp before describing it.
+4. Write down what the video teaches, the steps and the warnings from `manifest.json`, and verify each claim traces to a caption line or a frame.
+5. Create or extend the skill with `build_watch_skill`, choosing append or replace deliberately, and verify the result in a new `list_watch_skills` call.
+
+## Failure recovery
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| The manifest reports `frames.status: "unavailable"` | `ffmpeg` or `ffprobe` is missing from `PATH` | Install both on the server host and call `watch_media` again |
+| The transcript is empty | The video has no captions in the requested languages | Set `subtitle_languages` to the available codes or use `transcribe_audio` |
+| Most frames are blurred | The `sharpness` score is low or `scene_threshold` is too high | Lower `scene_threshold` and call `watch_media` again to find more frames |
 
 ## Tools & actions
 | Tool | Purpose |

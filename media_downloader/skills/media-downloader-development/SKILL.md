@@ -21,6 +21,22 @@ admission, serving, and durable graph state belong to their owning
 repositories. Read `AGENTS.md` before changing code and keep provider
 credentials and endpoints out of source, logs, and skill content.
 
+## Steps
+
+1. Find the owning requirement with `git grep -n "<term>" -- specs` and verify a row exists before editing.
+2. Install the pinned environment with `uv sync --locked --all-extras` and verify it completes without changing `uv.lock`.
+3. Make one scoped change with yt-dlp and network access mocked, and verify with `uv run --all-extras pytest tests/test_security_boundaries.py -q` that the tests pass.
+4. Run the repository gate with `uvx pre-commit run --all-files` and verify every hook passes.
+5. Stage reviewed paths only and verify with `git diff --cached --name-status` that no caches or generated output are included.
+
+## Failure recovery
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| A test tries to download media | yt-dlp or the network was not mocked | Patch the yt-dlp call in the test and run `uv run --all-extras pytest` on that module again |
+| `uv sync --locked` fails | `uv.lock` is out of date | Refresh it with `uv lock` and commit the lockfile with the version change |
+| A pre-commit hook fails | Formatting, spelling or a gate rejected the change | Fix the reported cause and re-stage the file with `git add -- <path>` |
+
 ## Rapid delivery: the 5-minute contract
 
 Specs are already designed. Deliver small, reviewable slices and cite the

@@ -30,6 +30,21 @@ Connect via the `mcp-client` skill against the **`media-downloader`** MCP server
 Requires `ffmpeg` on the server for MP3 extraction. `GRAPH_SERVICE_ENDPOINTS`
 (optional) enables native KG ingestion; it auto-no-ops when absent.
 
+## Steps
+
+1. Confirm the server is ready for MP3 extraction by checking `ffmpeg -version` on the server host, and verify a version line is printed.
+2. Call `download_media` with `video_url`, `audio_only` set to true and a `download_directory`, and verify the response status reports success.
+3. Check the `file` field of the response, and verify the path ends in `.mp3` inside `download_directory`.
+4. Inspect `kg_asset` in the response, and verify `media_type` is `audio` when an engine endpoint is configured.
+
+## Failure recovery
+
+| Failure | Cause | Recovery |
+|---|---|---|
+| The saved file is not an MP3 | `ffmpeg` is missing on the server | Install `ffmpeg` on the server host and call `download_media` again with `audio_only` true |
+| `kg_asset` is absent | `GRAPH_SERVICE_ENDPOINTS` is unset or unreachable | Set `GRAPH_SERVICE_ENDPOINTS` to a reachable engine endpoint, or accept the file-only result |
+| The call returns an error for the URL | The URL is private, unsupported or blocked by the security policy | Pass a public URL from a site supported by yt-dlp |
+
 ## Tools & actions
 | Tool | Purpose |
 |------|---------|
